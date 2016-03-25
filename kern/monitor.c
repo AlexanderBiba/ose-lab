@@ -12,6 +12,7 @@
 #include <kern/kdebug.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
+#define FN_NAME_MAX_LEN	256
 
 
 struct Command {
@@ -24,6 +25,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Display stack backtrace", mon_backtrace },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -55,10 +57,67 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+void print_curr_trace() {
+	uint32_t prev_ebp;
+	uint32_t prev_eip;
+	uint32_t prev_args[5];
+	struct Eipdebuginfo info;
+
+	__asm __volatile("movl (%%ebp),%0" : "=r" (prev_ebp));
+	__asm __volatile("movl 0x4(%%ebp),%0" : "=r" (prev_eip));
+	__asm __volatile("movl 0x8(%1),%0" : "=r" (prev_args[0]) : "r" (prev_ebp));
+	__asm __volatile("movl 0xC(%1),%0" : "=r" (prev_args[1]) : "r" (prev_ebp));
+	__asm __volatile("movl 0x10(%1),%0" : "=r" (prev_args[2]) : "r" (prev_ebp));
+	__asm __volatile("movl 0x14(%1),%0" : "=r" (prev_args[3]) : "r" (prev_ebp));
+	__asm __volatile("movl 0x18(%1),%0" : "=r" (prev_args[4]) : "r" (prev_ebp));
+
+	cprintf("  ebp %08x eip %08x args %08x %08x %08x %08x %08x\n", prev_ebp, prev_eip, prev_args[0], prev_args[1], prev_args[2], prev_args[3], prev_args[4]);
+
+	if(!debuginfo_eip(prev_eip, &info)){
+		uint32_t fn_addr = prev_eip-(uint32_t)info.eip_fn_addr;
+		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, fn_addr);
+	}
+}
+
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+	extern char bootstacktop[];
+
+	int i;
+	int j;
+	uint32_t prev_ebp;
+	uint32_t prev_eip;
+	uint32_t prev_args[5];
+	uint32_t curr_bp;
+	struct Eipdebuginfo info;
+	char dbg_fn_name[FN_NAME_MAX_LEN];
+
+	cprintf("Stack backtrace:\n");
+
+	print_curr_trace();
+
+	__asm __volatile("mov %%ebp, %0" : "=r" (curr_bp));
+
+	while(curr_bp != (uint32_t)bootstacktop-8) {
+		__asm __volatile("movl (%1),%0" : "=r" (prev_ebp) : "r" (curr_bp));
+		__asm __volatile("movl 0x4(%1),%0" : "=r" (prev_eip) : "r" (curr_bp));
+		__asm __volatile("movl 0x8(%1),%0" : "=r" (prev_args[0]) : "r" (prev_ebp));
+		__asm __volatile("movl 0xC(%1),%0" : "=r" (prev_args[1]) : "r" (prev_ebp));
+		__asm __volatile("movl 0x10(%1),%0" : "=r" (prev_args[2]) : "r" (prev_ebp));
+		__asm __volatile("movl 0x14(%1),%0" : "=r" (prev_args[3]) : "r" (prev_ebp));
+		__asm __volatile("movl 0x18(%1),%0" : "=r" (prev_args[4]) : "r" (prev_ebp));
+
+		cprintf("  ebp %08x eip %08x args %08x %08x %08x %08x %08x\n", prev_ebp, prev_eip, prev_args[0], prev_args[1], prev_args[2], prev_args[3], prev_args[4]);
+
+		if(!debuginfo_eip(prev_eip, &info)){
+			uint32_t fn_addr = prev_eip-(uint32_t)info.eip_fn_addr;
+			cprintf(" \t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, fn_addr);
+		}
+
+		__asm __volatile("mov (%1), %0" : "=r" (curr_bp) : "r" (curr_bp));
+	}
+
 	return 0;
 }
 
