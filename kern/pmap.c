@@ -365,7 +365,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	pde_t *pde;
 	pte_t *pgtab;
 
-	pde = &pgdir[PDX(va)];	//	this is a physical address !!!
+	pde = &pgdir[PDX(va)];
 	if(*pde & PTE_P) {
 		pgtab = (pte_t*)KADDR(PTE_ADDR(*pde));
 	}
@@ -373,10 +373,10 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		return NULL;
 	}
 	else {
-		struct PageInfo * page_alloced = page_alloc(ALLOC_ZERO);	//	alloc
+		struct PageInfo * page_alloced = page_alloc(ALLOC_ZERO);
 		if(!page_alloced)
 			return NULL;
-		++page_alloced->pp_ref;	//	inc
+		++page_alloced->pp_ref;
 		*pde = PTE_ADDR(page2pa(page_alloced)) | PTE_P | PTE_W | PTE_U;	//	*pde now points to the physical address of the allocated page
 		pgtab = (pte_t*)KADDR(PTE_ADDR(*pde));
 	}
@@ -458,7 +458,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	if(!pte)
 		return -E_NO_MEM;
 
-	*pte = PTE_ADDR(page2pa(pp));
+	*pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
 
 	return 0;
 }
@@ -514,8 +514,8 @@ page_remove(pde_t *pgdir, void *va)
 		return;
 
 	page_decref(pp);
-	*pte = 0;
 	tlb_invalidate(pgdir, va);
+	*pte = 0;
 }
 
 //
