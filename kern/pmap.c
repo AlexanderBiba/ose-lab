@@ -451,14 +451,17 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	pte_t *pte;
 
 	pte = pgdir_walk(pgdir, va, 0);
-	if(PTE_ADDR(*pte) == page2pa(pp))	//	same pgdir same va points to same pp
+	if(PTE_ADDR(*pte) == page2pa(pp)) {	//	same pgdir same va points to same pp
+		*pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
 		return 0;
+	}
 	page_remove(pgdir, va);
 	pte = pgdir_walk(pgdir, va, 1);
 	if(!pte)
 		return -E_NO_MEM;
 
 	*pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	++pp->pp_ref;
 
 	return 0;
 }
