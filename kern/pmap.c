@@ -249,13 +249,12 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	uintptr_t next_free = (uintptr_t)&pages[npages] - KERNBASE;
+
+	page_free_list = NULL;
 
 	// 1) map physical page 0 as in use
 	pages[0].pp_ref = 0;
 	pages[0].pp_link = NULL;
-
-	page_free_list = NULL;
 
 	// 2) base memory free
 	for (i = 1; i < npages_basemem; i++) {
@@ -265,13 +264,13 @@ page_init(void)
 	}
 
 	// 3) IO hole + kernel text + data + allocated so far
-	for (i = npages_basemem; i < next_free / PGSIZE + 1; i++) {
+	for (i = npages_basemem; i < PADDR(&pages[npages]) / PGSIZE + 1; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = NULL;
 	}
 
 	// 4) extended memory free
-	for (i = next_free / PGSIZE + 1; i < npages; i++) {
+	for (i = PADDR(&pages[npages]) / PGSIZE + 1; i < npages; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
