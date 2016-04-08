@@ -19,5 +19,6 @@ int mon_showmappings(int argc, char **argv, struct Trapframe *tf);
 int mon_setmappings(int argc, char **argv, struct Trapframe *tf);
 int mon_clearmappings(int argc, char **argv, struct Trapframe *tf);
 int mon_changemappingsperm(int argc, char **argv, struct Trapframe *tf);
+int mon_dumpmem(int argc, char **argv, struct Trapframe *tf);
 
 #endif	// !JOS_KERN_MONITOR_H
