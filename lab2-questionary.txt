@@ -16,7 +16,7 @@
 === Q What's the purpose of leaving virtual memory region
 ===   0xeebfe000-0xeebff000 inaccessible?
 ===   (free form, up to 10 words)
-
+  leaving this region inaccessible protects the kernel stack, different processes will not be able to write each other's stack.
 === Q Define a page table entry with the following properties:
 ===   frame starts at 0x1234000. It can be written by the kernel
 ===   without causing any errors, but has never been written yet. On
@@ -33,7 +33,7 @@
 ===   What type mystery_t should refer to?
 ===   (remove leading "====" from the correct answer line)
 ==== uintptr_t
-==== physaddr_t
+ physaddr_t
 
 
 === Q What information is stored in page directory when mem_init()
@@ -59,10 +59,10 @@
 ===   write the kernel's memory? What specific mechanisms protect the
 ===   kernel memory?
 ===   (free form, up to 15 words)
-
+user cant write to an area of kernel previliges
 === Q Which virtual addresses are readable by the user?
 ===   (in the form ADDR1-ADDR2, if none, specify NONE)
-
+N
 === Q Which virtual addresses are writable by the user?
 ===   (in the form ADDR1-ADDR2, if none, specify NONE)
 
@@ -70,10 +70,10 @@
 ===   level, PD or PT) after it has been set up by the kernel (and
 ===   before full TLB flush). What is the minimal N to gain full
 ===   control of the system from hacker's user space process?
-
+21
 === Q What's the maximum amount of physical memory this kernel can
 ===   support? (number of megabytes, without MB suffix)
-
+256
 === Q What single constant can be changed in kernel source to make
 ===   this limit 2 times lower (if kernel normally supports 10MB,
 ===   we want to make it support only 5MB?
