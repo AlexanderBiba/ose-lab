@@ -169,6 +169,7 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -181,6 +182,8 @@ mem_init(void)
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W | PTE_P);
+	boot_map_region(kern_pgdir, KSTACKTOP-PTSIZE, PTSIZE-KSTKSIZE, 0xFFFFFFFF+PTSIZE-KSTKSIZE, PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -190,6 +193,7 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, KERNBASE, 0x100000000-KERNBASE, 0, PTE_W | PTE_P);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -201,6 +205,7 @@ mem_init(void)
 	//
 	// If the machine reboots at this point, you've probably set up your
 	// kern_pgdir wrong.
+	//panic("before lcr3");
 	lcr3(PADDR(kern_pgdir));
 
 	check_page_free_list(0);
@@ -405,12 +410,12 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	a = (char*)ROUNDDOWN((uintptr_t)va, PGSIZE);
 	last = (char*)ROUNDDOWN(((uintptr_t)va) + size - 1, PGSIZE);
 	for(;;) {
-		pte = pgdir_walk(pgdir, a, 1);	//	maybe decrement ref ?
+		pte = pgdir_walk(pgdir, a, 1);
 		if(!pte)
 			panic("no more mem !");
 		if(*pte & PTE_P)
 			panic("remap !");
-		*pte = PTE_ADDR(pa) | perm | PTE_P;
+		*pte = PTE_ADDR(pa) | perm;
 		if(a == last)
 			break;
 		a += PGSIZE;
@@ -451,7 +456,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	pte_t *pte;
 
 	pte = pgdir_walk(pgdir, va, 0);
-	if(PTE_ADDR(*pte) == page2pa(pp)) {	//	same pgdir same va points to same pp
+	if(pte && PTE_ADDR(*pte) == page2pa(pp)) {	//	same pgdir same va points to same pp
 		*pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
 		return 0;
 	}
