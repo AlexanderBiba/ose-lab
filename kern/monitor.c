@@ -9,6 +9,7 @@
 
 #include <kern/console.h>
 #include <kern/monitor.h>
+#include <kern/pmap.h>
 #include <kern/kdebug.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
@@ -26,6 +27,10 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display stack backtrace", mon_backtrace },
+	{ "showmappings", "Display physical page mappings", mon_showmappings },
+	{ "setmappings", "Set physical page mappings", mon_setmappings },
+	{ "clearmappings", "Clear physical page mappings", mon_clearmappings },
+	{ "changemappingsperm", "Clear physical page mappings", mon_changemappingsperm },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -121,6 +126,110 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int 
+mon_showmappings(int argc, char **argv, struct Trapframe *tf) {
+	if(argc != 3) {
+		cprintf("showmappings usage: showmappings 0x<start_addr> 0x<end_addr>\n");
+		return -1;
+	}
+
+	uintptr_t start = strtol(argv[1], NULL, 16), end = strtol(argv[2], NULL, 16);
+	pte_t *pte = NULL;
+	struct PageInfo *pp = NULL;
+	uintptr_t va = 0;
+
+	void* a = (void*)ROUNDDOWN(start, PGSIZE);
+	void* last = (void*)ROUNDDOWN(end, PGSIZE);
+	for (; a <= last; a += PGSIZE) {
+		pp = page_lookup(kern_pgdir, (void*)a, &pte);
+		cprintf("va 0x%x is ", a);
+		if(pp)
+			cprintf("mapped to pa 0x%x with permissions %d\n", page2pa(pp), PGOFF(*pte));	//	PGOFF gives us 12 LSBs
+		else
+			cprintf("unmapped\n");
+	}
+	return 0;
+}
+
+int 
+mon_setmappings(int argc, char **argv, struct Trapframe *tf) {
+	if(argc != 5) {
+		cprintf("setmappings usage: setmappings 0x<virt_start_addr> 0x<virt_end_addr> 0x<phys_addr> 0x<permissions>\n");
+		return -1;
+	}
+
+	uintptr_t start = strtol(argv[1], NULL, 16), end = strtol(argv[2], NULL, 16);
+	physaddr_t pa = strtol(argv[3], NULL, 16);
+	uint32_t perm = strtol(argv[4], NULL, 16);
+
+	pte_t *pte = NULL;
+	struct PageInfo *pp = NULL;
+
+	void* a = (void*)ROUNDDOWN(start, PGSIZE);
+	void* last = (void*)ROUNDDOWN(end, PGSIZE);
+	for(;a <= last; a += PGSIZE, pa += PGSIZE) {
+		if(page_insert(kern_pgdir, pa2page(pa), a, perm) != 0)
+			panic("setmappings: page insert returned no more mem !");
+		cprintf("Mapping va 0x%x to pa 0x%x\n", a, pa);
+	}
+
+	return 0;
+}
+
+int 
+mon_clearmappings(int argc, char **argv, struct Trapframe *tf) {
+	if(argc != 3) {
+		cprintf("clearmappings usage: clearmappings 0x<start_addr> 0x<end_addr>\n");
+		return -1;
+	}
+
+	uintptr_t start = strtol(argv[1], NULL, 16), end = strtol(argv[2], NULL, 16);
+	pte_t *pte = NULL;
+	struct PageInfo *pp = NULL;
+	uintptr_t va = 0;
+
+	void* a = (void*)ROUNDDOWN(start, PGSIZE);
+	void* last = (void*)ROUNDDOWN(end, PGSIZE);
+	for (; a <= last; a += PGSIZE) {
+		pp = page_lookup(kern_pgdir, (void*)a, &pte);
+		cprintf("va 0x%x is ", a);
+		if(pp) {
+			page_remove(kern_pgdir, a);
+			cprintf("mapped to pa 0x%x, unmapping..\n", page2pa(pp));
+		}
+		else
+			cprintf("unmapped\n");
+	}
+	return 0;
+}
+
+int 
+mon_changemappingsperm(int argc, char **argv, struct Trapframe *tf) {
+	if(argc != 4) {
+		cprintf("setmappings usage: setmappings 0x<virt_start_addr> 0x<virt_end_addr> 0x<permissions>\n");
+		return -1;
+	}
+
+	uintptr_t start = strtol(argv[1], NULL, 16), end = strtol(argv[2], NULL, 16);
+	uint32_t perm = strtol(argv[3], NULL, 16);
+
+	pte_t *pte = NULL;
+	struct PageInfo *pp = NULL;
+
+	void* a = (void*)ROUNDDOWN(start, PGSIZE);
+	void* last = (void*)ROUNDDOWN(end, PGSIZE);
+	for(;a <= last; a += PGSIZE) {
+		pp = page_lookup(kern_pgdir, (void*)a, &pte);
+		if(!pp)
+			cprintf("va not mapped\n");
+		else if(page_insert(kern_pgdir, pp, a, perm) != 0)
+			panic("setmappings: page insert returned no more mem !");
+		else
+			cprintf("Changing permissions of va 0x%x to 0x%x\n", a, perm);
+	}
+
+	return 0;
+}
 
 
 /***** Kernel monitor command interpreter *****/

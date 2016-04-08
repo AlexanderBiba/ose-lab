@@ -374,16 +374,16 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	if(*pde & PTE_P) {
 		pgtab = (pte_t*)KADDR(PTE_ADDR(*pde));
 	}
-	else if(!create) {
-		return NULL;
-	}
-	else {
+	else if(create) {
 		struct PageInfo * page_alloced = page_alloc(ALLOC_ZERO);
 		if(!page_alloced)
 			return NULL;
 		++page_alloced->pp_ref;
 		*pde = PTE_ADDR(page2pa(page_alloced)) | PTE_P | PTE_W | PTE_U;	//	*pde now points to the physical address of the allocated page
 		pgtab = (pte_t*)KADDR(PTE_ADDR(*pde));
+	}
+	else {
+		return NULL;
 	}
 
 	return &pgtab[PTX(va)];
@@ -487,7 +487,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
 	pte_t *pte = pgdir_walk(pgdir, va, 0);
-	if(!pte)
+	if(!pte || !(*pte & PTE_P))
 		return NULL;
 
 	if(pte_store)
@@ -522,8 +522,9 @@ page_remove(pde_t *pgdir, void *va)
 		return;
 
 	page_decref(pp);
+
 	tlb_invalidate(pgdir, va);
-	*pte = 0;
+	*pte = *pte & ~PTE_P;
 }
 
 //
