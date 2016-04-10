@@ -32,6 +32,7 @@ static struct Command commands[] = {
 	{ "clearmappings", "Clear physical page mappings", mon_clearmappings },
 	{ "changemappingsperm", "Clear physical page mappings", mon_changemappingsperm },
 	{ "dumpmem", "Dump memory contents", mon_dumpmem },
+	{ "showallocs", "Display allocated address spaces", mon_showallocs },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -145,7 +146,7 @@ mon_showmappings(int argc, char **argv, struct Trapframe *tf) {
 		pp = page_lookup(kern_pgdir, (void*)a, &pte);
 		cprintf("va 0x%08x is ", a);
 		if(pp)
-			cprintf("mapped to pa 0x%08x with permissions %d\n", page2pa(pp), PGOFF(*pte));	//	PGOFF gives us 12 LSBs
+			cprintf("mapped to pa 0x%08x with permissions %d, page->pp_ref = %d\n", page2pa(pp), PGOFF(*pte), pp->pp_ref);	//	PGOFF gives us 12 LSBs
 		else
 			cprintf("unmapped\n");
 	}
@@ -278,6 +279,42 @@ mon_dumpmem(int argc, char **argv, struct Trapframe *tf) {
 	return 0;
 }
 
+int
+mon_showallocs(int argc, char **argv, struct Trapframe *tf) {
+	//if(argc != 4) {
+	//	cprintf("showallocs usage: showallocs\n");
+	//	return -1;
+	//}
+	uint32_t i = 0;
+	uint32_t a = 0;
+	pte_t *pte;
+
+	for(; i < PGNUM(0xFFFFFFFF);) {
+		if(page_lookup(kern_pgdir, (void*)a, NULL) == 0) {
+			while(i < PGNUM(0xFFFFFFFF) && page_lookup(kern_pgdir, (void*)a, NULL) == 0) {
+				i++;
+				a = (i << PTXSHIFT);
+			}
+		}
+		else if(page_lookup(kern_pgdir, (void*)a, NULL) == (void*)-1) {
+			cprintf("addresses 0x%08x - ", a);
+			while(i < PGNUM(0xFFFFFFFF) && page_lookup(kern_pgdir, (void*)a, NULL) == (void*)-1) {
+				i++;
+				a = (i << PTXSHIFT);
+			}
+			cprintf("0x%08x are mapped to invalid phys addresses\n", a);
+		} 
+		else {
+			cprintf("addresses 0x%08x - ", a);
+			while(i < PGNUM(0xFFFFFFFF) && page_lookup(kern_pgdir, (void*)a, NULL) != (void*)-1 && page_lookup(kern_pgdir, (void*)a, NULL) != 0) {
+				i++;
+				a = (i << PTXSHIFT);
+			}
+			cprintf("0x%08x are allocated\n", a);
+		}
+	}
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 

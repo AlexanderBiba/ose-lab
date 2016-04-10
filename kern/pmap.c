@@ -493,6 +493,9 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	if(pte_store)
 		*pte_store = pte;
 
+	if(PGNUM(*pte) >= npages)
+		return (void*)-1;	//	va mapped to invalid pa
+
 	return pa2page(*pte);
 }
 
