@@ -1,6 +1,0 @@
-Hi there,
-good time to begin :)
-
-
-
-using git
