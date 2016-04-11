@@ -281,10 +281,6 @@ mon_dumpmem(int argc, char **argv, struct Trapframe *tf) {
 
 int
 mon_showallocs(int argc, char **argv, struct Trapframe *tf) {
-	//if(argc != 4) {
-	//	cprintf("showallocs usage: showallocs\n");
-	//	return -1;
-	//}
 	uint32_t i = 0;
 	uint32_t a = 0;
 	pte_t *pte;
