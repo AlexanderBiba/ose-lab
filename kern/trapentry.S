@@ -47,9 +47,38 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+TRAPHANDLER_NOEC(DIVIDE,	T_DIVIDE);
+TRAPHANDLER_NOEC(DEBUG,		T_DEBUG);
+TRAPHANDLER_NOEC(NMI,		T_NMI);
+TRAPHANDLER_NOEC(BRKPT,		T_BRKPT);
+TRAPHANDLER_NOEC(OFLOW,		T_OFLOW);
+TRAPHANDLER_NOEC(BOUND,		T_BOUND);
+TRAPHANDLER_NOEC(ILLOP,		T_ILLOP);
+TRAPHANDLER_NOEC(DEVICE,	T_DEVICE);
+TRAPHANDLER	(DBLFLT,	T_DBLFLT);
+TRAPHANDLER	(TSS,		T_TSS);
+TRAPHANDLER	(SEGNP,		T_SEGNP);
+TRAPHANDLER	(STACK,		T_STACK);
+TRAPHANDLER	(GPFLT,		T_GPFLT);
+TRAPHANDLER	(PGFLT,		T_PGFLT);
+TRAPHANDLER_NOEC(FPERR,		T_FPERR);
+TRAPHANDLER	(ALIGN,		T_ALIGN);	//	does not appear in 80386 prog manual
+TRAPHANDLER_NOEC(MCHK,		T_MCHK);	//	does not appear in 80386 prog manual
+TRAPHANDLER_NOEC(SIMDERR,	T_SIMDERR);	//	does not appear in 80386 prog manual
 
+TRAPHANDLER	(SYSCALL,	T_SYSCALL);
+TRAPHANDLER	(DEFAULT,	T_DEFAULT);
 
 /*
  * Lab 3: Your code here for _alltraps
  */
 
+.globl _alltraps
+_alltraps:
+	pushl %ds;
+	pushl %es;
+	pushal;
+	movw GD_KD, %ds;
+	movw GD_KD, %es;
+	pushl %esp;
+	call trap;

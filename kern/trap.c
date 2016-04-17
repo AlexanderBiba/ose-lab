@@ -66,6 +66,49 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 
+	extern void DIVIDE();
+	extern void DEBUG();
+	extern void NMI();
+	extern void BRKPT();
+	extern void OFLOW();
+	extern void BOUND();
+	extern void ILLOP();
+	extern void DEVICE();
+	extern void DBLFLT();
+	extern void TSS();
+	extern void SEGNP();
+	extern void STACK();
+	extern void GPFLT();
+	extern void PGFLT();
+	extern void FPERR();
+	extern void ALIGN();
+	extern void MCHK();
+	extern void SIMDERR();
+	extern void SYSCALL();
+	extern void DEFAULT();
+
+	SETGATE(idt[T_DIVIDE], 	1, 0, DIVIDE,	0);
+	SETGATE(idt[T_DEBUG],	1, 0, DEBUG,	0);
+	SETGATE(idt[T_NMI],	1, 0, NMI,	0);
+	SETGATE(idt[T_BRKPT],	1, 0, BRKPT,	0);
+	SETGATE(idt[T_OFLOW],	1, 0, OFLOW,	0);
+	SETGATE(idt[T_BOUND],	1, 0, BOUND,	0);
+	SETGATE(idt[T_ILLOP],	1, 0, ILLOP,	0);
+	SETGATE(idt[T_DEVICE],	1, 0, DEVICE,	0);
+	SETGATE(idt[T_DBLFLT],	1, 0, DBLFLT,	0);
+	SETGATE(idt[T_TSS],	1, 0, TSS,	0);
+	SETGATE(idt[T_SEGNP],	1, 0, SEGNP,	0);
+	SETGATE(idt[T_STACK],	1, 0, STACK,	0);
+	SETGATE(idt[T_GPFLT],	1, 0, GPFLT,	0);
+	SETGATE(idt[T_PGFLT],	1, 0, PGFLT,	0);
+	SETGATE(idt[T_FPERR],	1, 0, FPERR,	0);
+	SETGATE(idt[T_ALIGN],	1, 0, ALIGN,	0);	//	does not appear in 80386 prog manual
+	SETGATE(idt[T_MCHK],	1, 0, MCHK,	0);	//	does not appear in 80386 prog manual
+	SETGATE(idt[T_SIMDERR],	1, 0, SIMDERR,	0);	//	does not appear in 80386 prog manual
+
+	SETGATE(idt[T_SYSCALL],	1, 0, SYSCALL,	0);
+	SETGATE(idt[T_DEFAULT],	1, 0, DEFAULT,	0);
+
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -157,6 +200,7 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
+	panic("");
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");
