@@ -78,7 +78,5 @@ _alltraps:
 	pushl %ds;
 	pushl %es;
 	pushal;
-	movw GD_KD, %ds;
-	movw GD_KD, %es;
 	pushl %esp;
 	call trap;
