@@ -47,6 +47,36 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+/*
+
+// first challenge: this is what the definition should look like
+// ISTRAP and DPL values are incorrect, correct values can be found at trap_init()
+//
+//	 NAME		NUM		ISTRAP?	DPL	EC?
+DEF_TRAP(DIVIDE,	T_DIVIDE,	1, 	0, 	0);
+DEF_TRAP(DEBUG,		T_DEBUG,	1, 	0, 	0);
+DEF_TRAP(NMI,		T_NMI,		1, 	0, 	0);
+DEF_TRAP(BRKPT,		T_BRKPT,	1, 	0, 	0);
+DEF_TRAP(OFLOW,		T_OFLOW,	1, 	0, 	0);
+DEF_TRAP(BOUND,		T_BOUND,	1, 	0, 	0);
+DEF_TRAP(ILLOP,		T_ILLOP,	1, 	0, 	0);
+DEF_TRAP(DEVICE,	T_DEVICE,	1, 	0, 	0);
+DEF_TRAP(DBLFLT,	T_DBLFLT,	1, 	0, 	1);
+DEF_TRAP(TSS,		T_TSS,		1, 	0, 	1);
+DEF_TRAP(SEGNP,		T_SEGNP,	1, 	0, 	1);
+DEF_TRAP(STACK,		T_STACK,	1, 	0, 	1);
+DEF_TRAP(GPFLT,		T_GPFLT,	1, 	0, 	1);
+DEF_TRAP(PGFLT,		T_PGFLT,	1, 	0, 	1);
+DEF_TRAP(FPERR,		T_FPERR,	1, 	0, 	0);
+DEF_TRAP(ALIGN,		T_ALIGN,	1, 	0, 	1);	//	does not appear in 80386 prog manual
+DEF_TRAP(MCHK,		T_MCHK,		1, 	0, 	0);	//	does not appear in 80386 prog manual
+DEF_TRAP(SIMDERR,	T_SIMDERR,	1, 	0, 	0);	//	does not appear in 80386 prog manual
+
+DEF_TRAP(SYSCALL,	T_SYSCALL,	1, 	0, 	1);
+DEF_TRAP(DEFAULT,	T_DEFAULT,	1, 	0, 	1);
+
+*/ 
+
 TRAPHANDLER_NOEC(DIVIDE,	T_DIVIDE);
 TRAPHANDLER_NOEC(DEBUG,		T_DEBUG);
 TRAPHANDLER_NOEC(NMI,		T_NMI);
