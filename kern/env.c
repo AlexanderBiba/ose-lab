@@ -186,8 +186,8 @@ env_setup_vm(struct Env *e)
 
 	// LAB 3: Your code here.
 	++p->pp_ref;
-
-	e->env_pgdir = (pde_t *) PTE_ADDR(p);
+	memset(page2kva(p), 0, PGSIZE);
+	e->env_pgdir = page2kva(p);
 
 	memcpy(&e->env_pgdir[PDX(UTOP)], &kern_pgdir[PDX(UTOP)], (PDX(0xFFFFFFFF) - PDX(UTOP)) * sizeof(pte_t));
 
@@ -369,7 +369,6 @@ load_icode(struct Env *e, uint8_t *binary)
 			memset((void *) ph->p_va + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
 		}
 	}
-
 	lcr3(PADDR(kern_pgdir));
 
 	e->env_tf.tf_eip = elfhdr->e_entry;

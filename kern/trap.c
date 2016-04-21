@@ -193,23 +193,18 @@ trap_dispatch(struct Trapframe *tf)
 	if ((tf->tf_cs & 3) == 3 && tf->tf_trapno == T_BRKPT)
 		monitor(tf);
 
-	//if (tf->tf_trapno == T_SYSCALL) {
-	//	int ret = syscall(
-	//		tf->tf_regs.reg_eax, 
-	//		tf->tf_regs.reg_edx,
-	//		tf->tf_regs.reg_ecx,
-	//		tf->tf_regs.reg_ebx,
-	//		tf->tf_regs.reg_edi,
-	//		tf->tf_regs.reg_esi
-	//		);
+	if (tf->tf_trapno == T_SYSCALL) {
+		tf->tf_regs.reg_eax = syscall(
+			tf->tf_regs.reg_eax, 
+			tf->tf_regs.reg_edx,
+			tf->tf_regs.reg_ecx,
+			tf->tf_regs.reg_ebx,
+			tf->tf_regs.reg_edi,
+			tf->tf_regs.reg_esi
+			);
 
-	//	asm volatile("movl %0, %%eax\n"
-	//		:
-	//		: "r" (ret)
-	//		: "cc", "memory");
-
-	//	return;
-	//}
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);

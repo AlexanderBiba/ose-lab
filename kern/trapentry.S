@@ -96,8 +96,8 @@ TRAPHANDLER	(ALIGN,		T_ALIGN);	//	does not appear in 80386 prog manual
 TRAPHANDLER_NOEC(MCHK,		T_MCHK);	//	does not appear in 80386 prog manual
 TRAPHANDLER_NOEC(SIMDERR,	T_SIMDERR);	//	does not appear in 80386 prog manual
 
-TRAPHANDLER	(SYSCALL,	T_SYSCALL);
-TRAPHANDLER	(DEFAULT,	T_DEFAULT);
+TRAPHANDLER_NOEC(SYSCALL,	T_SYSCALL);
+TRAPHANDLER_NOEC(DEFAULT,	T_DEFAULT);
 
 /*
  * Lab 3: Your code here for _alltraps
