@@ -87,7 +87,9 @@ trap_init(void)
 	extern void SYSCALL();
 	extern void DEFAULT();
 
-	// the trap/interrupt and dpl flags (..,1 <- t/i, .., .., 3 <- dpl) are not 100%, but are ok for Lab 3
+	// TODO: the trap/interrupt and dpl flags (..,1 <- t/i, .., .., 3 <- dpl) are not 100%, but are ok for Lab 3
+	//
+
 	SETGATE(idt[T_DIVIDE], 	1, GD_KT, DIVIDE,	3);
 	SETGATE(idt[T_DEBUG],	1, GD_KT, DEBUG,	3);
 	SETGATE(idt[T_NMI],	1, GD_KT, NMI,		3);
