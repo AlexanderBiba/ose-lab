@@ -581,6 +581,23 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	if((uintptr_t)va >= ULIM || (uintptr_t)va + len >= ULIM) {
+		user_mem_check_addr = ULIM;
+		return -E_FAULT;
+	}
+
+	uintptr_t a = (uintptr_t)ROUNDDOWN(va, PGSIZE);
+	uintptr_t last = (uintptr_t)ROUNDUP(va + len, PGSIZE);
+
+	while(a < last){
+		pte_t *pte = 0;
+		struct PageInfo *pp = page_lookup(env->env_pgdir, (void*)a, &pte);
+		if(pp == (void*)-1 || pp == NULL || !(*pte & perm)) {	//	also fails if page not mapped or mapped to invalid address
+			user_mem_check_addr = (uintptr_t)ROUNDDOWN(va, PGSIZE) == a ? (uintptr_t) va : a; // if this is the first page return the va
+			return -E_FAULT;
+		}
+		a += PGSIZE;
+	}
 
 	return 0;
 }
