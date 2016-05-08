@@ -14,8 +14,6 @@
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
 
-static struct Taskstate ts;
-
 /* For debugging, so print_trapframe can distinguish between printing
  * a saved trapframe and printing the current trapframe and print some
  * additional information in the latter case.
@@ -72,13 +70,18 @@ trap_init(void)
 
 	// LAB 3: Your code here. challenge 1
 	extern uint32_t traphndlrs[];
+
 	int i;
 	for (i = 0; i < 256; ++i)
-		if ( i!=T_DEBUG &&i!=T_BRKPT && i!=T_SYSCALL)
-			SETGATE(idt[i], 0,GD_KT, traphndlrs[i], 0);
-	SETGATE(idt[T_DEBUG], 	1,GD_KT, traphndlrs[T_DEBUG],	3);
-	SETGATE(idt[T_BRKPT], 	1,GD_KT, traphndlrs[T_BRKPT],	3);
-	SETGATE(idt[T_SYSCALL], 0,GD_KT, traphndlrs[T_SYSCALL],	3);
+		if ( 	i != T_DEBUG && 
+			i != T_BRKPT && 
+			i != T_SYSCALL	)
+			SETGATE(idt[i], 0, GD_KT, traphndlrs[i], 0);
+
+	SETGATE(idt[T_DEBUG], 	1, GD_KT, traphndlrs[T_DEBUG],		3);
+	SETGATE(idt[T_BRKPT], 	1, GD_KT, traphndlrs[T_BRKPT],		3);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, traphndlrs[T_SYSCALL],	3);
+
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -110,15 +113,17 @@ trap_init_percpu(void)
 	//
 	// LAB 4: Your code here:
 
+	struct Taskstate *cpu_ts = &thiscpu->cpu_ts;
+
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
-	ts.ts_esp0 = KSTACKTOP;
-	ts.ts_ss0 = GD_KD;
+	cpu_ts->ts_esp0 = KSTACKTOP;
+	cpu_ts->ts_ss0 = GD_KD;
 
 	// Initialize the TSS slot of the gdt.
-	gdt[GD_TSS0 >> 3] = SEG16(STS_T32A, (uint32_t) (&ts),
+	gdt[(GD_TSS0 >> 3) + cpunum()] = SEG16(STS_T32A, (uint32_t) (cpu_ts),
 					sizeof(struct Taskstate) - 1, 0);
-	gdt[GD_TSS0 >> 3].sd_s = 0;
+	gdt[(GD_TSS0 >> 3) + cpunum()].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
@@ -208,21 +213,10 @@ trap_dispatch(struct Trapframe *tf)
 		return;
 	}
 
-=======
-	// Handle spurious interrupts
-	// The hardware sometimes raises these because of noise on the
-	// IRQ line or other reasons. We don't care.
-	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SPURIOUS) {
-		cprintf("Spurious interrupt on irq 7\n");
-		print_trapframe(tf);
-		return;
-	}
-
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
 
->>>>>>> 5feb0ff665c704227fb8a86d1d2e2c4d80ac5ba2
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)

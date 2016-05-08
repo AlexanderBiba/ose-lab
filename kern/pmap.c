@@ -200,8 +200,8 @@ mem_init(void)
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W | PTE_P);
-	boot_map_region(kern_pgdir, KSTACKTOP-PTSIZE, PTSIZE-KSTKSIZE, 0xFFFFFFFF+PTSIZE-KSTKSIZE, PTE_W);
+	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(* percpu_kstacks), PTE_W | PTE_P);
+	boot_map_region(kern_pgdir, KSTACKTOP - PTSIZE, PTSIZE - KSTKSIZE, 0, 0);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -263,6 +263,14 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
+	int i, j;
+	int kstacktop_i;
+
+	for(i = 1; i < NCPU; i++) {
+		kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W | PTE_P);
+		boot_map_region(kern_pgdir, kstacktop_i - (KSTKSIZE + KSTKGAP), KSTKGAP, 0, 0);
+	}
 
 }
 
@@ -306,29 +314,20 @@ page_init(void)
 
 	page_free_list = NULL;
 
-	// 1) map physical page 0 as in use
-	pages[0].pp_ref = 0;
-	pages[0].pp_link = NULL;
-
-	// 2) base memory free
-	for (i = 1; i < npages_basemem; i++) {
-		pages[i].pp_ref = 0;
-		pages[i].pp_link = page_free_list;
-		page_free_list = &pages[i];
+	for (i = 0; i < npages; i++) {
+		// map these physical pages as in use
+		if (	(i == 0) ||
+			(i >= npages_basemem && i < PADDR(boot_alloc(0)) / PGSIZE) ||
+			(i == MPENTRY_PADDR / PGSIZE)	) {
+			pages[i].pp_ref = 0;
+			pages[i].pp_link = NULL;
+		} else {
+			pages[i].pp_ref = 0;
+			pages[i].pp_link = page_free_list;
+			page_free_list = &pages[i];
+		}
 	}
 
-	// 3) IO hole + kernel text + data + allocated so far
-	for (i = npages_basemem; i < PADDR(boot_alloc(0)) / PGSIZE; i++) {
-		pages[i].pp_ref = 0;
-		pages[i].pp_link = NULL;
-	}
-
-	// 4) extended memory free
-	for (i = PADDR(boot_alloc(0)) / PGSIZE; i < npages; i++) {
-		pages[i].pp_ref = 0;
-		pages[i].pp_link = page_free_list;
-		page_free_list = &pages[i];
-	}
 }
 
 //
@@ -462,8 +461,10 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		pte = pgdir_walk(pgdir, a, 1);
 		if(!pte)
 			panic("no more mem !");
+/*
 		if(*pte & PTE_P)
 			panic("remap !");
+*/
 		*pte = PTE_ADDR(pa) | perm;
 		if(a == last)
 			break;
@@ -623,7 +624,16 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	uintptr_t base_mapped = base;
+
+	if(base + size > MMIOLIM)
+		panic("mmio_map_region overflowing MMIOLIM !");
+
+	boot_map_region(kern_pgdir, base_mapped, size, pa, PTE_P | PTE_PCD | PTE_PWT);
+
+	base = ROUNDUP(base_mapped + size, PGSIZE);
+
+	return (void *)base_mapped;
 }
 
 static uintptr_t user_mem_check_addr;
