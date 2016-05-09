@@ -117,7 +117,7 @@ trap_init_percpu(void)
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
-	cpu_ts->ts_esp0 = KSTACKTOP;
+	cpu_ts->ts_esp0 = KSTACKTOP - (thiscpu->cpu_id * (KSTKSIZE + KSTKGAP));
 	cpu_ts->ts_ss0 = GD_KD;
 
 	// Initialize the TSS slot of the gdt.
