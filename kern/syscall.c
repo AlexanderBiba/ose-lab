@@ -85,7 +85,40 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+	struct Env *newenv = NULL;
+	int r = 0;
+
+	cprintf("starting dumbfork\n");
+	cprintf("curenv is: %d\n", curenv);
+	cprintf("curenv->env_id is: %d\n", curenv->env_id);
+	r = env_alloc(&newenv, curenv->env_id);
+	cprintf("r is: %d\n", r);
+	if (r < 0);
+		return r;
+
+	newenv->env_status = ENV_NOT_RUNNABLE;
+
+	newenv->env_tf.tf_regs.reg_eax = 0;	//	TODO: this is the result right?
+	newenv->env_tf.tf_regs.reg_ebx = curenv->env_tf.tf_regs.reg_ebx;
+	newenv->env_tf.tf_regs.reg_ecx = curenv->env_tf.tf_regs.reg_ecx;
+	newenv->env_tf.tf_regs.reg_edx = curenv->env_tf.tf_regs.reg_edx;
+	newenv->env_tf.tf_regs.reg_edi = curenv->env_tf.tf_regs.reg_edi;
+	newenv->env_tf.tf_regs.reg_esi = curenv->env_tf.tf_regs.reg_esi;
+	newenv->env_tf.tf_regs.reg_ebp = curenv->env_tf.tf_regs.reg_ebp;
+
+/*
+	newenv->env_tf.tf_eip = curenv->env_tf.tf_eip;
+	newenv->env_tf.tf_esp = curenv->env_tf.tf_esp;
+	newenv->env_tf.tf_es = curenv->env_tf.tf_es;
+	newenv->env_tf.tf_ds = curenv->env_tf.tf_ds;
+	newenv->env_tf.tf_cs = curenv->env_tf.tf_cs;
+	newenv->env_tf.tf_ss = curenv->env_tf.tf_ss;
+	newenv->env_tf.tf_trapno = curenv->env_tf.tf_trapno;
+	newenv->env_tf.tf_eflags = curenv->env_tf.tf_eflags;
+	newenv->env_tf.tf_err = curenv->env_tf.tf_err;
+*/
+
+	return newenv->env_id;
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -105,7 +138,18 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+	struct Env *e = NULL;
+	int r = 0;
+
+	if ((r = envid2env(envid, &e, 1)) < 0)
+		return r;
+
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE)
+		return -E_INVAL;
+
+	e->env_status = status;
+
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -150,7 +194,28 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
-	panic("sys_page_alloc not implemented");
+	struct PageInfo *p = NULL;
+	struct Env *e = NULL;
+	int r = 0;
+
+	if ((r = envid2env(envid, &e, 1)) < 0)
+		return r;
+
+	if (va >= (void *)UTOP || PGOFF(va) != 0)
+		return -E_INVAL;
+
+	if ((perm & ~PTE_SYSCALL) != 0)
+		return -E_INVAL;
+
+	if (!(p = page_alloc(1))) // TODO: maybe shouldn't zero it?
+		return -E_NO_MEM;
+
+	if ((r = page_insert(e->env_pgdir, p, va, perm)) < 0) {
+		page_free(p);
+		return r;
+	}
+
+	return 0;
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -181,7 +246,36 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+	struct Env *srcenv = NULL, *dstenv = NULL;
+	struct PageInfo *p = NULL;
+	pte_t *pte = NULL;
+	int r = 0;
+
+	if ((r = envid2env(srcenvid, &srcenv, 1)) < 0)
+		return r;
+
+	if ((r = envid2env(dstenvid, &dstenv, 1)) < 0)
+		return r;
+
+	if (srcva >= (void *)UTOP || PGOFF(srcva) != 0)
+		return -E_INVAL;
+
+	if (dstva >= (void *)UTOP || PGOFF(dstva) != 0)
+		return -E_INVAL;
+
+	if (!(p = page_lookup(srcenv->env_pgdir, srcva, &pte)))
+		return -E_INVAL;
+
+	if ((perm & ~PTE_SYSCALL) != 0)
+		return -E_INVAL;
+
+	if ((perm & PTE_W) && !(*pte & PTE_W))
+		return -E_INVAL;
+
+	if ((r = page_insert(srcenv->env_pgdir, p, dstva, perm)) < 0)
+		return r;
+
+	return 0;
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -197,7 +291,18 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+	struct Env *e = NULL;
+	int r = 0;
+
+	if ((r = envid2env(envid, &e, 1)) < 0)
+		return r;
+
+	if (va >= (void *)UTOP || PGOFF(va) != 0)
+		return -E_INVAL;
+
+	page_remove(e->env_pgdir, va);
+
+	return 0;
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -294,6 +399,26 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	case SYS_yield :
 		sys_yield();
+		break;
+
+	case SYS_exofork :
+		ret = sys_exofork();
+		break;
+
+	case SYS_env_set_status :
+		ret = sys_env_set_status(a1, a2);
+		break;
+
+	case SYS_page_alloc :
+		ret = sys_page_alloc(a1, (void *)a2, a3);
+		break;
+
+	case SYS_page_map :
+		ret = sys_page_map(a1, (void *)a2, a3, (void *)a4, a5);
+		break;
+
+	case SYS_page_unmap :
+		ret = sys_page_unmap(a1, (void *)a2);
 		break;
 
 	//case NSYSCALLS :
