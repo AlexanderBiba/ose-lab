@@ -122,7 +122,7 @@ trap_init_percpu(void)
 
 	// Initialize the TSS slot of the gdt.
 	gdt[(GD_TSS0 >> 3) + cpunum()] = SEG16(STS_T32A, (uint32_t) (cpu_ts),
-					sizeof(struct Taskstate) , 0);
+					sizeof(struct Taskstate) - 1, 0);
 	gdt[(GD_TSS0 >> 3) + cpunum()].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the
@@ -185,17 +185,12 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 
-//	if ((tf->tf_cs & 3) == 3 && tf->tf_trapno == T_PGFLT)
-	if( tf->tf_trapno== T_PGFLT) {
+	if (tf->tf_trapno == T_PGFLT)
 		page_fault_handler(tf);
-		return;
-	}
 
-//	if ((tf->tf_cs & 3) == 3 && tf->tf_trapno == T_BRKPT)
-	if( tf->tf_trapno == T_BRKPT ) {
+	if (tf->tf_trapno == T_BRKPT)
 		monitor(tf);
-		return;
-	}
+
 	if (tf->tf_trapno == T_SYSCALL) {
 		tf->tf_regs.reg_eax = syscall(
 			tf->tf_regs.reg_eax, 
@@ -221,11 +216,7 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
-		lapic_eoi();
-		sched_yield();
-		return;
-	}
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -262,8 +253,8 @@ trap(struct Trapframe *tf)
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
-		assert(curenv);
 		lock_kernel();
+		assert(curenv);
 
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
@@ -344,28 +335,7 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
-	if( curenv->env_pgfault_upcall) {
-		struct UTrapframe *utf;
-		uintptr_t utf_addr;
-		if(UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp <= UXSTACKTOP-1)
-			utf_addr = tf->tf_esp - sizeof(struct UTrapframe) -4;
-		else
-			utf_addr = UXSTACKTOP - sizeof(struct UTrapframe);
 
-		user_mem_assert(curenv, (void*)utf_addr, 1, PTE_W);
-
-		utf = (struct UTrapframe*)utf_addr;
-
-		utf->utf_fault_va =	fault_va;
-		utf->utf_err 	= 		tf->tf_err;
-		utf->utf_regs 	= 	tf->tf_regs;
-		utf->utf_eip 	=	tf->tf_eip;
-		utf->utf_eflags = 	tf->tf_eflags;
-		utf->utf_esp	=	tf->tf_esp;
-		curenv->env_tf.tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
-		curenv->env_tf.tf_esp = utf_addr;
-		env_run(curenv);
-	}
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);

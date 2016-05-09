@@ -313,21 +313,9 @@ page_init(void)
 	size_t i;
 
 	page_free_list = NULL;
-	// mark page 0 as in use	
-	pages[0].pp_ref =0;
-	pages[0].pp_link=NULL;
-	for (i = 1; i < npages; i++) {
-		// map these physical pages as in use
-		if ( i < MPENTRY_PADDR/PGSIZE || i >= PADDR(boot_alloc(0))/PGSIZE ) {
-			pages[i].pp_ref =0;
-			pages[i].pp_link = page_free_list;
-			page_free_list = &pages[i];
-		} else{
-			pages[i].pp_ref = 0;
-			pages[i].pp_link = NULL;
-		}
 
-/*
+	for (i = 0; i < npages; i++) {
+		// map these physical pages as in use
 		if (	(i == 0) ||
 			(i >= npages_basemem && i < PADDR(boot_alloc(0)) / PGSIZE) ||
 			(i == MPENTRY_PADDR / PGSIZE)	) {
@@ -338,8 +326,8 @@ page_init(void)
 			pages[i].pp_link = page_free_list;
 			page_free_list = &pages[i];
 		}
-*/
 	}
+
 }
 
 //

@@ -119,14 +119,8 @@ mp_main(void)
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
-//<<<<<<< HEAD
-	sched_yield();
-	// Remove this after you finish Exercise 4
-//	for (;;);
-//=======
 	lock_kernel();
 	sched_yield();
-//>>>>>>> 83a1621366f87e9e1fd2e27aad8370c49512f750
 }
 
 /*
