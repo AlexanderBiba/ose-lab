@@ -473,10 +473,8 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		pte = pgdir_walk(pgdir, a, 1);
 		if(!pte)
 			panic("no more mem !");
-/*
 		if(*pte & PTE_P)
 			panic("remap !");
-*/
 		*pte = PTE_ADDR(pa) | perm;
 		if(a == last)
 			break;
@@ -641,7 +639,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	if(base + size > MMIOLIM)
 		panic("mmio_map_region overflowing MMIOLIM !");
 
-	boot_map_region(kern_pgdir, base_mapped, size, pa, PTE_P | PTE_PCD | PTE_PWT);
+	boot_map_region(kern_pgdir, base_mapped, size, pa, PTE_P | PTE_W | PTE_PCD | PTE_PWT);
 
 	base = ROUNDUP(base_mapped + size, PGSIZE);
 
