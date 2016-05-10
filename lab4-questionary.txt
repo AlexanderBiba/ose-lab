@@ -27,12 +27,14 @@ mentry.S loaded by bootloader instead of bootstrap CPU to address 0x7000, so we 
 ===   which using a shared kernel stack will go wrong, even with the
 ===   protection of the big kernel lock.
 ===   (free form)
-using big kernel lock does not guarantee protection, for example when an interrupt occurs automaticly it pushes flags to the stack in which will not be relevant to the same cpu when it will get back.
+using big kernel lock does not guarantee protection from other cpus,
+ for example when an interrupt occurs automaticly it pushes flags to the stack in which will not be relevant to the same cpu when it will get back.
 
 === Q Whenever the kernel switches from one environment to another, it
 ===   must ensure the old environment's registers are saved so they
 ===   can be restored properly later. Where does this happen?
 ===   (JOS function name)
+trap_dispatch
 
 === Q In your implementation of env_run() you should have called
 ===   lcr3(). Before and after the call to lcr3(), your code makes
