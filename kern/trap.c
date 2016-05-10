@@ -347,12 +347,12 @@ page_fault_handler(struct Trapframe *tf)
 	}
 
 	struct UTrapframe uxtf = {
-		.utf_fault_va	= fault_va,
-		.utf_err	= tf->tf_err,
-		.utf_regs	= tf->tf_regs,
-		.utf_eip	= tf->tf_eip,
-		.utf_eflags	= tf->tf_eflags,
-		.utf_esp	= tf->tf_esp
+		fault_va,
+		tf->tf_err,
+		tf->tf_regs,
+		tf->tf_eip,
+		tf->tf_eflags,
+		tf->tf_esp
 	};
 
 	uintptr_t top = UXSTACKTOP - 1;
