@@ -65,10 +65,12 @@ _pgfault_upcall:
 	// ways as registers become unavailable as scratch space.
 	//
 	// LAB 4: Your code here.
-	movl 0x28(%esp), %eax	//	get eip
+	movl 0x28(%esp), %eax	//	get trap-time eip
 	movl 0x30(%esp), %ebx	//	get trap-time esp
+
 	sub $4, %ebx
-	movl %eax, (%eax)	//	push trap-time eip to trap-time esp
+	movl %eax, (%ebx)	//	push trap-time eip to trap-time esp
+	movl %ebx,0x30(%esp)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.

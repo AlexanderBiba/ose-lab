@@ -358,12 +358,12 @@ page_fault_handler(struct Trapframe *tf)
 	uintptr_t top = UXSTACKTOP - 1;
 
 	if (tf->tf_esp <= UXSTACKTOP - 1 && tf->tf_esp >= UXSTACKTOP - PGSIZE) { // fault handler itself faulted
-		top = tf->tf_esp - 1;
+		top = tf->tf_esp - 4;
 		if (top - sizeof(struct UTrapframe) < UXSTACKTOP - PGSIZE) // overflowing exception stack
 			env_destroy(curenv);
 	}
 
-	memmove((void *) top - sizeof(struct UTrapframe), &uxtf, sizeof(struct UTrapframe));
+	memcpy((void *) top - sizeof(struct UTrapframe), &uxtf, sizeof(struct UTrapframe));
 
 	curenv->env_tf.tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
 
