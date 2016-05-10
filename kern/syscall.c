@@ -88,35 +88,13 @@ sys_exofork(void)
 	struct Env *newenv = NULL;
 	int r = 0;
 
-	cprintf("starting dumbfork\n");
-	cprintf("curenv is: %d\n", curenv);
-	cprintf("curenv->env_id is: %d\n", curenv->env_id);
-	r = env_alloc(&newenv, curenv->env_id);
-	cprintf("r is: %d\n", r);
-	if (r < 0);
+	if ((r = env_alloc(&newenv, curenv->env_id)) < 0)
 		return r;
 
 	newenv->env_status = ENV_NOT_RUNNABLE;
 
+	newenv->env_tf = curenv->env_tf;
 	newenv->env_tf.tf_regs.reg_eax = 0;	//	TODO: this is the result right?
-	newenv->env_tf.tf_regs.reg_ebx = curenv->env_tf.tf_regs.reg_ebx;
-	newenv->env_tf.tf_regs.reg_ecx = curenv->env_tf.tf_regs.reg_ecx;
-	newenv->env_tf.tf_regs.reg_edx = curenv->env_tf.tf_regs.reg_edx;
-	newenv->env_tf.tf_regs.reg_edi = curenv->env_tf.tf_regs.reg_edi;
-	newenv->env_tf.tf_regs.reg_esi = curenv->env_tf.tf_regs.reg_esi;
-	newenv->env_tf.tf_regs.reg_ebp = curenv->env_tf.tf_regs.reg_ebp;
-
-/*
-	newenv->env_tf.tf_eip = curenv->env_tf.tf_eip;
-	newenv->env_tf.tf_esp = curenv->env_tf.tf_esp;
-	newenv->env_tf.tf_es = curenv->env_tf.tf_es;
-	newenv->env_tf.tf_ds = curenv->env_tf.tf_ds;
-	newenv->env_tf.tf_cs = curenv->env_tf.tf_cs;
-	newenv->env_tf.tf_ss = curenv->env_tf.tf_ss;
-	newenv->env_tf.tf_trapno = curenv->env_tf.tf_trapno;
-	newenv->env_tf.tf_eflags = curenv->env_tf.tf_eflags;
-	newenv->env_tf.tf_err = curenv->env_tf.tf_err;
-*/
 
 	return newenv->env_id;
 }
@@ -207,7 +185,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if ((perm & ~PTE_SYSCALL) != 0)
 		return -E_INVAL;
 
-	if (!(p = page_alloc(1))) // TODO: maybe shouldn't zero it?
+	if (!(p = page_alloc(ALLOC_ZERO))) // TODO: maybe shouldn't zero it?
 		return -E_NO_MEM;
 
 	if ((r = page_insert(e->env_pgdir, p, va, perm)) < 0) {
@@ -272,7 +250,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	if ((perm & PTE_W) && !(*pte & PTE_W))
 		return -E_INVAL;
 
-	if ((r = page_insert(srcenv->env_pgdir, p, dstva, perm)) < 0)
+	if ((r = page_insert(dstenv->env_pgdir, p, dstva, perm)) < 0)
 		return r;
 
 	return 0;
