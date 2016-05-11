@@ -25,7 +25,20 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	int perm = PGOFF(uvpt[PTX(addr)]);
 
+	if ((perm & PTE_COW) == 0)
+		panic("Page fault for a non-cow page !");
+
+	if (!(err & FEC_WR))
+		panic("Page fault for read access !");
+
+	//	TODO: is this necessary ?
+	if ((perm & PTE_P) == 0)
+		panic("Page fault for a non-present page !");
+
+	//	TODO: should I also check in uvpd that pte is present ?
+		
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -33,8 +46,15 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+	envid_t envid = sys_getenvid();
 
-	panic("pgfault not implemented");
+	if ((r = sys_page_alloc(envid, PFTEMP, perm | PTE_W)) < 0)
+		panic("sys_page_alloc: %e", r);
+
+	memmove(PFTEMP, addr, PGSIZE);
+
+	if ((r = sys_page_map(envid, PFTEMP, envid, addr, perm | PTE_W)) < 0)
+		panic("sys_page_map: %e", r);
 }
 
 //
@@ -52,9 +72,22 @@ static int
 duppage(envid_t envid, unsigned pn)
 {
 	int r;
+	envid_t curenvid = sys_getenvid();
+	int perm = PGOFF(uvpt[pn]);
+	void *va = (void *) (pn * PGSIZE);
+	int newperm = 	(perm & PTE_W)	 == PTE_W ||
+			(perm & PTE_COW) == PTE_COW ? 
+			perm | PTE_COW :
+			perm;
 
+	cprintf("Entering duppage\n");
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	if ((r = sys_page_map(curenvid, va, envid, va, newperm)) < 0)
+		panic("sys_page_map failed: %e", r);
+
+	if ((r = sys_page_map(curenvid, va, curenvid, va, newperm)) < 0)
+		panic("sys_page_map failed: %e", r);
+
 	return 0;
 }
 
@@ -78,7 +111,34 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	set_pgfault_handler(pgfault);
+	envid_t child_envid = sys_exofork();
+
+	if (child_envid < 0)
+		panic("sys_exofork failed: %e", child_envid);
+
+	if (child_envid != 0) {	//	parent process
+		int va;
+		int r;
+
+		for (va = 0; va < UXSTACKTOP - PGSIZE; va += PGSIZE) {
+			pde_t pde = uvpd[PDX(va)];
+			pte_t pte = uvpt[PTX(va)];
+
+			if ((pde & PTE_P) && (pte & PTE_P))
+				duppage(child_envid, va);
+		}
+
+		if ((r = sys_page_alloc(child_envid, (void *) UXSTACKTOP - PGSIZE, PTE_P | PTE_U | PTE_W)) < 0)
+			panic("sys_page_alloc failed: %e", r);
+
+		sys_env_set_status(child_envid, ENV_RUNNING);
+	} else {	//	child process
+		thisenv = &envs[ENVX(sys_getenvid())];
+		assert (thisenv->env_id == sys_getenvid());
+	}
+
+	return child_envid;
 }
 
 // Challenge!
