@@ -98,8 +98,7 @@ parts:
 	for the child and 3 for the parent.
 Both envs after fork alternate between sys_yield() and cprintf("child\n") 
 or cprintf("parent\n").
-The resulting output for the first fork is a round robin scheduled
-printing 
+The resulting output for the first fork is a round robin scheduled printing:
 child 
 parent 
 child 
