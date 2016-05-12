@@ -30,24 +30,23 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 	struct Env* itrenv = curenv ? curenv : &envs[NENV-1];
-	bool no_runnable_envs = false;
+	struct Env* topenv = NULL;
+	int curenvid = curenv ? ENVX(curenv->env_id) : 0;
+	int i;
 
-	for (;;) {
-		itrenv = itrenv == (&envs[NENV-1]) ? &envs[0] : itrenv + 1;	//	loop through envs
-
-		if (	(curenv  && itrenv == curenv) ||
-			(!curenv && itrenv == &envs[NENV-1])	) {	//	completed a full circle
-			no_runnable_envs = true;
-			break;
-		}
+	for (i = 0; i < NENV; i++) {
+		itrenv = &envs[(i + curenvid) % NENV];	//	loop through envs
 
 		if (itrenv->env_status == ENV_RUNNABLE)
-			break;
+			topenv = itrenv;
 	}
 
-	if (	(itrenv->env_status == ENV_RUNNABLE) || 
-		(no_runnable_envs && curenv && itrenv->env_status == ENV_RUNNING) )
-		env_run(itrenv);
+	if (topenv && topenv->env_status == ENV_RUNNABLE)
+		env_run(topenv);
+
+	if (!topenv && curenv && curenv->env_status == ENV_RUNNING)
+		env_run(curenv);
+
 
 	// sched_halt never returns
 	sched_halt();
