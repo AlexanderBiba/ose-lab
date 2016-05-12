@@ -352,7 +352,6 @@ page_fault_handler(struct Trapframe *tf)
 		tf->tf_eflags,
 		tf->tf_esp
 	};
-	cprintf("incoming trap fault_va: %x\n", fault_va);
 
 	uintptr_t top = (tf->tf_esp <= UXSTACKTOP - 1 && tf->tf_esp >= UXSTACKTOP - PGSIZE) ? tf->tf_esp - 4 : UXSTACKTOP - 1;
 
@@ -361,7 +360,6 @@ page_fault_handler(struct Trapframe *tf)
 	memcpy((void *) top - sizeof(struct UTrapframe), &uxtf, sizeof(struct UTrapframe));
 
 	curenv->env_tf.tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
-
 	curenv->env_tf.tf_esp = (uintptr_t) top - sizeof(struct UTrapframe);
 
 	env_run(curenv);
