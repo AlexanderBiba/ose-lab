@@ -252,7 +252,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	if (!(p = page_lookup(srcenv->env_pgdir, srcva, &pte)))
 		return -E_INVAL;
 
-	if ((perm & ~PTE_SYSCALL) != 0)
+	if ((perm & ~PTE_SYSCALL) != 0 || (perm & (PTE_P | PTE_U)) != (PTE_P | PTE_U))
 		return -E_INVAL;
 
 	if ((perm & PTE_W) && !(*pte & PTE_W))
@@ -333,7 +333,46 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env *rcvenv;
+	int r;
+	bool send_pg;
+	struct PageInfo *p;
+	pte_t *pte;
+	
+	if ((r = envid2env(envid, &rcvenv, 0)) < 0)
+		return r;
+
+	if (!rcvenv->env_ipc_recving)
+		return -E_IPC_NOT_RECV;
+
+	if (srcva < (void *)UTOP) {	//	transferring page
+		if (PGOFF(srcva) != 0)
+			return -E_INVAL;
+
+		if ((perm & ~PTE_SYSCALL) != 0 || (perm & (PTE_P | PTE_U)) != (PTE_P | PTE_U))
+			return -E_INVAL;
+
+		if (!(p = page_lookup(curenv->env_pgdir, srcva, &pte)))
+			return -E_INVAL;
+
+		if ((perm & PTE_W) && !(*pte & PTE_W))
+			return -E_INVAL;
+
+		if (rcvenv->env_ipc_dstva >= (void *)UTOP)	//	the recv does not want to accept a page TODO: this was not written specifically in the definition
+			return -E_INVAL;
+
+		if ((r = page_insert(rcvenv->env_pgdir, p, rcvenv->env_ipc_dstva, perm)) < 0)
+			return r;
+
+		rcvenv->env_ipc_perm = perm;
+	}
+
+	rcvenv->env_ipc_value = value;
+	rcvenv->env_ipc_from = curenv->env_id;
+	rcvenv->env_ipc_recving = false;
+	rcvenv->env_status = ENV_RUNNABLE;
+
+	return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -351,7 +390,15 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	if (dstva < (void *)UTOP && PGOFF(dstva) != 0)
+		return -E_INVAL;
+
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+
+	sched_yield();
+
 	return 0;
 }
 
@@ -409,6 +456,14 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	case SYS_env_set_pgfault_upcall :
 		ret = sys_env_set_pgfault_upcall(a1, (void *)a2);
+		break;
+
+	case SYS_ipc_try_send :
+		ret = sys_ipc_try_send(a1, a2, (void *)a3, a4);
+		break;
+
+	case SYS_ipc_recv :
+		ret = sys_ipc_recv((void *)a1);
 		break;
 
 
