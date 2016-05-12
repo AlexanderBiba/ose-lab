@@ -402,6 +402,20 @@ sys_ipc_recv(void *dstva)
 	return 0;
 }
 
+static int
+sys_env_set_sched_prio(envid_t envid, uint32_t prio)
+{
+	struct Env *e;
+	int r;
+
+	if ((r = envid2env(envid, &e, 1)) < 0)
+		return r;
+
+	e->env_prio = prio;
+
+	return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -464,6 +478,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	case SYS_ipc_recv :
 		ret = sys_ipc_recv((void *)a1);
+		break;
+
+	case SYS_env_set_sched_prio :
+		ret = sys_env_set_sched_prio(a1, a2);
 		break;
 
 

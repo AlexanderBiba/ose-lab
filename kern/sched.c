@@ -36,8 +36,7 @@ sched_yield(void)
 
 	for (i = 0; i < NENV; i++) {
 		itrenv = &envs[(i + curenvid) % NENV];	//	loop through envs
-
-		if (itrenv->env_status == ENV_RUNNABLE)
+		if ((itrenv->env_status == ENV_RUNNABLE) && (!topenv || itrenv->env_prio > topenv->env_prio))
 			topenv = itrenv;
 	}
 
