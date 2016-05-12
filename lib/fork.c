@@ -25,22 +25,17 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
-	int perm = PGOFF(uvpt[PTX(addr)]);
-
-	cprintf("incoming page fault, address %x, envid %x\n", addr, sys_getenvid());
-
-	if ((perm & PTE_COW) == 0)
-		panic("Page fault for a non-cow page !");
+	int perm = PGOFF(uvpt[PGNUM(addr)]);
 
 	if (!(err & FEC_WR))
 		panic("Page fault for read access !");
 
-	//	TODO: is this necessary ?
+	if ((perm & PTE_COW) == 0)
+		panic("Page fault for a non-cow page !");
+
 	if ((perm & PTE_P) == 0)
 		panic("Page fault for a non-present page !");
 
-	//	TODO: should I also check in uvpd that pte is present ?
-		
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -50,13 +45,17 @@ pgfault(struct UTrapframe *utf)
 	// LAB 4: Your code here.
 	envid_t envid = sys_getenvid();
 
-	if ((r = sys_page_alloc(envid, PFTEMP, perm | PTE_W)) < 0)
+	int newperm = perm & PTE_SYSCALL;
+	void *va = (void *)ROUNDDOWN((uintptr_t)addr, PGSIZE);
+
+	if ((r = sys_page_alloc(envid, PFTEMP, newperm | PTE_W)) < 0)
 		panic("sys_page_alloc: %e", r);
 
-	memmove(PFTEMP, addr, PGSIZE);
+	memmove(PFTEMP, va, PGSIZE);
 
-	if ((r = sys_page_map(envid, PFTEMP, envid, addr, perm | PTE_W)) < 0)
+	if ((r = sys_page_map(envid, PFTEMP, envid, va, newperm | PTE_W)) < 0)
 		panic("sys_page_map: %e", r);
+
 }
 
 //
@@ -80,12 +79,10 @@ duppage(envid_t envid, unsigned pn)
 	void *va = (void *) (pn * PGSIZE);
 	int newperm = 	(perm & PTE_W)	 == PTE_W ||
 			(perm & PTE_COW) == PTE_COW ? 
-			perm | PTE_COW :
+			(perm | PTE_COW) & ~PTE_W :
 			perm;
 
-	newperm = newperm & PTE_SYSCALL;
-
-	//cprintf("duppage on envid: %x, va is %x, pde is: %x, pte is: %x, curenvid is: %x, newperm is: %x\n", envid, va, uvpd[pn >> 10], uvpt[pn], curenvid, newperm);
+	newperm &= PTE_SYSCALL;
 
 	if ((r = sys_page_map(curenvid, va, envid, va, newperm)) < 0)
 		panic("sys_page_map failed: %e", r);
@@ -116,7 +113,6 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	cprintf("entering fork from %x\n", sys_getenvid());
 	set_pgfault_handler(pgfault);
 	envid_t child_envid = sys_exofork();
 
@@ -131,22 +127,24 @@ fork(void)
 			pde_t *pde = (pde_t *) &uvpd[PDX(va)];
 			pte_t *pte = (pte_t *) &uvpt[PGNUM(va)];
 
-			if ((*pde & PTE_P) && (*pte & PTE_P)) {
+			if ((*pde & PTE_P) && (*pte & PTE_P))
 				duppage(child_envid, PGNUM(va));
-			}
 		}
 
 		if ((r = sys_page_alloc(child_envid, (void *) UXSTACKTOP - PGSIZE, PTE_P | PTE_U | PTE_W)) < 0)
 			panic("sys_page_alloc failed: %e", r);
 
+		if ((r = sys_env_set_pgfault_upcall(child_envid, thisenv->env_pgfault_upcall)) < 0)
+			panic("sys_env_set_pgfault_upcall failed: %e", r);
+
 		if ((r = sys_env_set_status(child_envid, ENV_RUNNABLE)) < 0)
 			panic("sys_env_set_status: %e", r);
 
-		sys_yield();
 	} else {	//	child process
 		thisenv = &envs[ENVX(sys_getenvid())];
 		assert (thisenv->env_id == sys_getenvid());
 	}
+
 	return child_envid;
 }
 

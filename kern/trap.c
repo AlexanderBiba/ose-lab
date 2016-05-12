@@ -352,6 +352,7 @@ page_fault_handler(struct Trapframe *tf)
 		tf->tf_eflags,
 		tf->tf_esp
 	};
+	cprintf("incoming trap fault_va: %x\n", fault_va);
 
 	uintptr_t top = (tf->tf_esp <= UXSTACKTOP - 1 && tf->tf_esp >= UXSTACKTOP - PGSIZE) ? tf->tf_esp - 4 : UXSTACKTOP - 1;
 
