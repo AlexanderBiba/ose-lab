@@ -336,8 +336,6 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 4: Your code here.
 
-	user_mem_assert(curenv, (void *) UXSTACKTOP, PGSIZE, PTE_W);	//	also destroys the env
-
 	if (!curenv->env_pgfault_upcall) {
 		// Destroy the environment that caused the fault.
 		cprintf("[%08x] user fault va %08x ip %08x\n",
@@ -355,13 +353,9 @@ page_fault_handler(struct Trapframe *tf)
 		tf->tf_esp
 	};
 
-	uintptr_t top = UXSTACKTOP - 1;
+	uintptr_t top = (tf->tf_esp <= UXSTACKTOP - 1 && tf->tf_esp >= UXSTACKTOP - PGSIZE) ? tf->tf_esp - 4 : UXSTACKTOP - 1;
 
-	if (tf->tf_esp <= UXSTACKTOP - 1 && tf->tf_esp >= UXSTACKTOP - PGSIZE) { // fault handler itself faulted
-		top = tf->tf_esp - 4;
-		if (top - sizeof(struct UTrapframe) < UXSTACKTOP - PGSIZE) // overflowing exception stack
-			env_destroy(curenv);
-	}
+	user_mem_assert(curenv, (void *) top - sizeof(struct UTrapframe), sizeof(struct UTrapframe), PTE_W);	//	also destroys the env
 
 	memcpy((void *) top - sizeof(struct UTrapframe), &uxtf, sizeof(struct UTrapframe));
 

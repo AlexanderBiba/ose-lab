@@ -27,6 +27,8 @@ pgfault(struct UTrapframe *utf)
 	// LAB 4: Your code here.
 	int perm = PGOFF(uvpt[PTX(addr)]);
 
+	cprintf("incoming page fault, address %x, envid %x\n", addr, sys_getenvid());
+
 	if ((perm & PTE_COW) == 0)
 		panic("Page fault for a non-cow page !");
 
@@ -71,6 +73,7 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
+	// LAB 4: Your code here.
 	int r;
 	envid_t curenvid = sys_getenvid();
 	int perm = PGOFF(uvpt[pn]);
@@ -80,8 +83,10 @@ duppage(envid_t envid, unsigned pn)
 			perm | PTE_COW :
 			perm;
 
-	cprintf("Entering duppage\n");
-	// LAB 4: Your code here.
+	newperm = newperm & PTE_SYSCALL;
+
+	//cprintf("duppage on envid: %x, va is %x, pde is: %x, pte is: %x, curenvid is: %x, newperm is: %x\n", envid, va, uvpd[pn >> 10], uvpt[pn], curenvid, newperm);
+
 	if ((r = sys_page_map(curenvid, va, envid, va, newperm)) < 0)
 		panic("sys_page_map failed: %e", r);
 
@@ -111,6 +116,7 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
+	cprintf("entering fork from %x\n", sys_getenvid());
 	set_pgfault_handler(pgfault);
 	envid_t child_envid = sys_exofork();
 
@@ -118,26 +124,29 @@ fork(void)
 		panic("sys_exofork failed: %e", child_envid);
 
 	if (child_envid != 0) {	//	parent process
-		int va;
+		uintptr_t va;
 		int r;
 
 		for (va = 0; va < UXSTACKTOP - PGSIZE; va += PGSIZE) {
-			pde_t pde = uvpd[PDX(va)];
-			pte_t pte = uvpt[PTX(va)];
+			pde_t *pde = (pde_t *) &uvpd[PDX(va)];
+			pte_t *pte = (pte_t *) &uvpt[PGNUM(va)];
 
-			if ((pde & PTE_P) && (pte & PTE_P))
-				duppage(child_envid, va);
+			if ((*pde & PTE_P) && (*pte & PTE_P)) {
+				duppage(child_envid, PGNUM(va));
+			}
 		}
 
 		if ((r = sys_page_alloc(child_envid, (void *) UXSTACKTOP - PGSIZE, PTE_P | PTE_U | PTE_W)) < 0)
 			panic("sys_page_alloc failed: %e", r);
 
-		sys_env_set_status(child_envid, ENV_RUNNING);
+		if ((r = sys_env_set_status(child_envid, ENV_RUNNABLE)) < 0)
+			panic("sys_env_set_status: %e", r);
+
+		sys_yield();
 	} else {	//	child process
 		thisenv = &envs[ENVX(sys_getenvid())];
 		assert (thisenv->env_id == sys_getenvid());
 	}
-
 	return child_envid;
 }
 
