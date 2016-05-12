@@ -19,7 +19,8 @@
 ===   boot/boot.S? In other words, what could go wrong if it were
 ===   omitted in kern/mpentry.S?
 ===   (free form)
-mentry.S loaded by bootloader instead of bootstrap CPU to address 0x7000, so we need to compute the physical address, offset+original load address.
+mentry.S loaded by bootloader instead of bootstrap CPU to address 0x7000, 
+so we need to compute the physical address, offset+original load address.
 
 === Q It seems that using the big kernel lock guarantees that only one
 ===   CPU can run the kernel code at a time. Why do we still need
@@ -28,13 +29,14 @@ mentry.S loaded by bootloader instead of bootstrap CPU to address 0x7000, so we 
 ===   protection of the big kernel lock.
 ===   (free form)
 using big kernel lock does not guarantee protection from other cpus,
- for example when an interrupt occurs automaticly it pushes flags to the stack in which will not be relevant to the same cpu when it will get back.
+for example when an interrupt occurs automaticly it pushes flags to the 
+stack in which will not be relevant to the same cpu when it will get back.
 
 === Q Whenever the kernel switches from one environment to another, it
 ===   must ensure the old environment's registers are saved so they
 ===   can be restored properly later. Where does this happen?
 ===   (JOS function name)
-trap_dispatch
+trap
 
 === Q In your implementation of env_run() you should have called
 ===   lcr3(). Before and after the call to lcr3(), your code makes
@@ -50,20 +52,60 @@ trap_dispatch
 === Q In Ex. 4, what happens if the user environment runs out of
 ===   space on the exception stack?
 ===   (one setence, free form)
+user_mem_assert fails and the environment is destroyed.
 
 === Q In dumpfork.c, the first time you call duppage(), the function
 ===   allocates a page in one environment (env A) and then maps it in
 ===   another (env B). At whataddress is the page mapped in env A, and
 ===   at what address is it mapped in env B?
 ===   (ADDR(in env A):ADDR(in env B) (example: 0xAAAAAAAA:0xBBBBBBBB)
+0x00800000:0x00400000
 
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
+2
 
 === Q If the challenge requires changing the kernel source, list the
 ===   files which you have changed/added during implementation.
 ===   (one file per line, relative to lab directory containing .git/)
+kern/sched.c
+kern/env.c
+kern/syscall.c
+lib/syscall.c
+inc/syscall.h
+inc/env.h
+inc/lib.h
 
 === Q Describe you solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
+We've updated the current scheduler policy to fixed-priority scheduling.
+A field env_sched_prio was added to struct Env in inc/env.h, this field
+is of type uint32_t initialized to 0 in env_alloc(), and can be set with 
+the sys_env_set_sched_prio() system call to any unsigned int.
+sys_env_set_sched_prio() takes 2 args: envid and prio, and allows setting
+priority for the env itself and its immediate children (using 1 in 
+envid2env() checkperm).
+The scheduler essentialy goes over all the envs in the kernel and
+finds the env with the highest priority to run.
+The scheduler starts it's cycle from the curenv, so if there are several
+envs with the highest priority, it works like round robin.
+Testing was done with a the program user/schedprio.c, this program has 2
+parts:
+1)	forks the env and sets from the parent env a priority of 5 for
+	both envs.
+2)	forks the env and sets (again from the parent) a priority of 5
+	for the child and 3 for the parent.
+Both envs after fork alternate between sys_yield() and cprintf("child\n") 
+or cprintf("parent\n").
+The resulting output for the first fork is a round robin scheduled
+printing 
+child 
+parent 
+child 
+parent 
+and so on to the screen.
+The second fork starts with printing 3 times child and then prints
+3 times parent.
+Program works as expected: when same priority => RR, when different 
+priority => preference to the higher priority.

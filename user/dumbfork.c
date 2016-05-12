@@ -5,6 +5,7 @@
 #include <inc/lib.h>
 
 envid_t dumbfork(void);
+bool flag = false;
 
 void
 umain(int argc, char **argv)
@@ -27,6 +28,10 @@ duppage(envid_t dstenv, void *addr)
 {
 	int r;
 
+	if(!flag) {
+		cprintf("addr is:%x\n", addr);
+		flag = true;
+	}
 	// This is NOT what you should do in your fork.
 	if ((r = sys_page_alloc(dstenv, addr, PTE_P|PTE_U|PTE_W)) < 0)
 		panic("sys_page_alloc: %e", r);

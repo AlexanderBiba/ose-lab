@@ -411,7 +411,7 @@ sys_env_set_sched_prio(envid_t envid, uint32_t prio)
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
 
-	e->env_prio = prio;
+	e->env_sched_prio = prio;
 
 	return 0;
 }

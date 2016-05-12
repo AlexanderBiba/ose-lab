@@ -36,9 +36,17 @@ sched_yield(void)
 
 	for (i = 0; i < NENV; i++) {
 		itrenv = &envs[(i + curenvid) % NENV];	//	loop through envs
-		if ((itrenv->env_status == ENV_RUNNABLE) && (!topenv || itrenv->env_prio > topenv->env_prio))
+		if ((itrenv->env_status == ENV_RUNNABLE) && (!topenv || itrenv->env_sched_prio > topenv->env_sched_prio))
 			topenv = itrenv;
 	}
+
+	// the following is needed because curenv is marked as  
+	// ENV_RUNNING and not ENV_RUNNABLE, so if the top prio
+	// env we found has priority lower than curenv, run curenv
+	if (	topenv && topenv->env_status == ENV_RUNNABLE 	&& 
+		curenv && curenv->env_status == ENV_RUNNING 	&& 
+		curenv->env_sched_prio > topenv->env_sched_prio	)
+		env_run(curenv);
 
 	if (topenv && topenv->env_status == ENV_RUNNABLE)
 		env_run(topenv);

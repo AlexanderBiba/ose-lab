@@ -67,7 +67,7 @@ struct Env {
 	int env_ipc_perm;		// Perm of page mapping received
 
 	// Lab 4 challenge
-	uint32_t env_prio;
+	uint32_t env_sched_prio;
 };
 
 #endif // !JOS_INC_ENV_H
