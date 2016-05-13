@@ -21,7 +21,7 @@
 ===   (free form)
 mentry.S loaded by bootloader instead of bootstrap CPU to address 0x7000, 
 so we need to compute the physical address, offset+original load address, that is exacly the purpose of the MPBOOTPHYS macro,
-if omitted in kern/mpentry.S we could not load any code below correctly, the addresses will be at userspace of virtualmem beacuse runnig from protected.
+if omitted in kern/mpentry.S we could not load any code below correctly
 
 === Q It seems that using the big kernel lock guarantees that only one
 ===   CPU can run the kernel code at a time. Why do we still need
@@ -49,7 +49,7 @@ trap
 ===   which the virtual address maps. Why can the pointer e be
 ===   dereferenced both before and after the addressing switch?
 ===   (one sentence, free form)
-because virtual addresses in every environment map to the same phisical addresses
+because virtual addresses in every environment is mapprd to the same physical addresses
 
 === Q In Ex. 4, what happens if the user environment runs out of
 ===   space on the exception stack?
