@@ -51,8 +51,7 @@ bc_pgfault(struct UTrapframe *utf)
 	addr = ROUNDDOWN(addr, PGSIZE);
 	assert((((uint32_t)addr - DISKMAP) / BLKSIZE) == blockno);
 
-	//void *disk_addr = diskaddr(blockno);
-	if ((r = sys_page_alloc(0, addr, PTE_W | PTE_P | PTE_U)) < 0)	//	TODO: permissions correct ?
+	if ((r = sys_page_alloc(0, addr, PTE_W | PTE_P | PTE_U)) < 0)
 		panic("in bc_pgfault, sys_page_map: %e", r);
 
 	if ((r = ide_read(blockno * BLKSECTS, addr, BLKSECTS)) < 0)
@@ -86,8 +85,13 @@ flush_block(void *addr)
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	if (!va_is_mapped(addr) || !va_is_dirty(addr))
-		panic("flush_block va %08x is not mapped", addr);
+	if (!va_is_mapped(addr))
+		//panic("flush_block va %08x is not mapped", addr);
+		return;
+
+	if (!va_is_dirty(addr))
+		//panic("flush_block va %08x is not dirty", addr);
+		return;
 
 	int r;
 	void *va = ROUNDDOWN(addr, PGSIZE);
