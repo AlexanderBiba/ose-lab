@@ -214,25 +214,18 @@ serve_read(envid_t envid, union Fsipc *ipc)
 		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// Lab 5: Your code here:
-    
-    struct OpenFile *ofile;
-    
-    int res = openfile_lookup(envid,req->req_fileid, &ofile);
-    
-    if (res < 0)
-        return res;
-    
-    if(!ofile)
-        cprintf("ofile == NULL\n");
-    
-    res = file_read(ofile->o_file, ret->ret_buf, req->req_n, ofile->o_fd->fd_offset);
-    
-    if (res < 0)
-        return res;
-    
-    ofile->o_fd->fd_offset += res;
+	struct OpenFile *o;
+	int r;
 
-	return res;
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+	        return r;
+
+	if ((r = file_read(o->o_file, ret->ret_buf, req->req_n, o->o_fd->fd_offset)) < 0)
+	        return r;
+
+	o->o_fd->fd_offset += r;
+
+	return r;
 }
 
 
@@ -247,28 +240,18 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// LAB 5: Your code here.
-    
-    
-    struct OpenFile *ofile;
-    
-    int res = openfile_lookup(envid,req->req_fileid, &ofile);
-    
-    if (res < 0)
-        return res;
-    
-    if(!ofile)
-        cprintf("ofile == NULL\n");
-    
-    res = file_write(ofile->o_file, req->req_buf, req->req_n, ofile->o_fd->fd_offset);
-    
-    if (res < 0)
-        return res;
-    
-    ofile->o_fd->fd_offset += res;
-    
-    
-    
-    return res;
+	struct OpenFile *o;
+	int r;
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+	        return r;
+
+	if ((r = file_write(o->o_file, req->req_buf, req->req_n, o->o_fd->fd_offset)) < 0)
+	        return r;
+
+	o->o_fd->fd_offset += r;
+
+	return r;
 }
 
 // Stat ipc->stat.req_fileid.  Return the file's struct Stat to the

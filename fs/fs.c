@@ -64,9 +64,9 @@ alloc_block(void)
 	// LAB 5: Your code here.
 	uint32_t blockno;
 
-	for (blockno = 1; blockno < super->s_nblocks * BLKBITSIZE; blockno++) {	//	skip superblock
-		if (bitmap[blockno/32] & 1<<(blockno%32))	{
-			bitmap[blockno/32] &= 0<<(blockno%32);
+	for (blockno = 0; blockno < super->s_nblocks; blockno++) {
+		if (block_is_free(blockno))	{
+			bitmap[blockno/32] &= ~(1<<(blockno%32));
 			flush_block((void *)&bitmap[blockno/32]);
 			return blockno;
 		}
