@@ -575,7 +575,7 @@ page_remove(pde_t *pgdir, void *va)
 	page_decref(pp);
 
 	tlb_invalidate(pgdir, va);
-	*pte = *pte & ~PTE_P;
+	*pte = 0;
 }
 
 //
