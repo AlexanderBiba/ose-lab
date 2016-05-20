@@ -73,16 +73,14 @@ trap_init(void)
 	extern uint32_t traphndlrs[];
 
 	int i;
-	for (i = 0; i < 256; ++i)
-		if ( 	i != T_DEBUG && 
-			i != T_BRKPT && 
-			i != T_SYSCALL	)
-			SETGATE(idt[i], 0, GD_KT, traphndlrs[i], 0);
+	for (i = 0; i < 256; ++i)	//	default values for exceptions
+		SETGATE(idt[i], 0, GD_KT, traphndlrs[i], 0);
 
 	SETGATE(idt[T_DEBUG], 	1, GD_KT, traphndlrs[T_DEBUG],		3);
 	SETGATE(idt[T_BRKPT], 	1, GD_KT, traphndlrs[T_BRKPT],		3);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, traphndlrs[T_SYSCALL],	3);
-	for (i = IRQ_OFFSET; i < IRQ_OFFSET + 16; i++)	//	init interrupts
+
+	for (i = IRQ_OFFSET; i < IRQ_OFFSET + 16; i++)	//	default values for interrupts
 		SETGATE(idt[i], 0, GD_KT, traphndlrs[i],	3);
 
 	// Per-CPU setup 
@@ -227,6 +225,16 @@ trap_dispatch(struct Trapframe *tf)
 
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD) {
+		kbd_intr();
+		return;
+	}
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL) {
+		serial_intr();
+		return;
+	}
+
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
