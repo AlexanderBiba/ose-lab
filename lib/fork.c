@@ -74,20 +74,29 @@ duppage(envid_t envid, unsigned pn)
 {
 	// LAB 4: Your code here.
 	int r;
-	envid_t curenvid = sys_getenvid();
 	int perm = PGOFF(uvpt[pn]);
 	void *va = (void *) (pn * PGSIZE);
-	int newperm = 	(perm & PTE_W)	 == PTE_W ||
+
+	// just copy the mapping
+	if ((perm & PTE_SHARE) == PTE_SHARE) {
+		perm &= PTE_SYSCALL;
+		if ((r = sys_page_map(0, va, envid, va, perm)) < 0)
+			panic("sys_page_map failed: %e", r);
+		return 0;
+	}
+
+	// copy on write
+	int newperm =	(perm & PTE_W)	 == PTE_W ||
 			(perm & PTE_COW) == PTE_COW ? 
 			(perm | PTE_COW) & ~PTE_W :
 			perm;
 
 	newperm &= PTE_SYSCALL;
 
-	if ((r = sys_page_map(curenvid, va, envid, va, newperm)) < 0)
+	if ((r = sys_page_map(0, va, envid, va, newperm)) < 0)
 		panic("sys_page_map failed: %e", r);
 
-	if ((r = sys_page_map(curenvid, va, curenvid, va, newperm)) < 0)
+	if ((r = sys_page_map(0, va, 0, va, newperm)) < 0)
 		panic("sys_page_map failed: %e", r);
 
 	return 0;
