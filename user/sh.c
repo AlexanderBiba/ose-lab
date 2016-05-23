@@ -91,7 +91,9 @@ runcmd(char* s)
 {
 	char *argv[MAXARGS], *t, argv0buf[BUFSIZ];
 	int argc, c, i, r, p[2], fd, pipe_child;
+	int mult_cmds;
 
+	mult_cmds = 0;
 	pipe_child = 0;
 	gettoken(s, 0);
 
@@ -179,6 +181,17 @@ again:
 			panic("| not implemented");
 			break;
 
+		case ';':
+			if ((r = fork()) < 0) {
+				cprintf("fork: %e", r);
+				exit();
+			}
+			if (r == 0) {
+				goto runit;
+			} else {
+				wait(r);
+				goto again;
+			}
 		case '&':
 		case 0:		// String is complete
 			// Run the current command!
