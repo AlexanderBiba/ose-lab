@@ -1,7 +1,74 @@
 #include <inc/lib.h>
 
 #define BUFSIZ 1024		/* Find the buffer overrun bug! */
+
 int debug = 0;
+
+static char buf[BUFSIZ];
+static const char cwd[] = "/";
+
+static int
+match_str(const char *p, const char *q) {
+	while (*p && *p == *q)
+		p++, q++;
+
+	if (*p)
+		return -1;
+
+	return strlen(q);
+}
+
+static void
+tab_complete(int *cursor)
+{
+	int fd, n, count_matches = 0, r;
+	struct File f;
+	char latest_match[BUFSIZ] = { 0 };
+
+	if ((fd = open(cwd, O_RDONLY)) < 0)
+		panic("open %s: %e", cwd, fd);
+	while ((n = readn(fd, &f, sizeof f)) == sizeof f) {
+		if (f.f_name[0] && (r = match_str(buf, f.f_name)) != -1)
+			printf("\n%s", f.f_name);
+	}
+
+	printf("\n$ %s", buf);
+}
+
+static char *
+sh_readline(const char *prompt)
+{
+	int i, c, echoing;
+
+	if (prompt != NULL)
+		cprintf("%s", prompt);
+
+	i = 0;
+	echoing = iscons(0);
+	while (1) {
+		c = getchar();
+		if (c < 0) {
+			if (c != -E_EOF)
+				cprintf("read error: %e\n", c);
+			return NULL;
+		} else if ((c == '\b' || c == '\x7f') && i > 0) {
+			if (echoing)
+				cputchar('\b');
+			i--;
+		} else if (c >= ' ' && i < BUFSIZ-1) {
+			if (echoing)
+				cputchar(c);
+			buf[i++] = c;
+		} else if (c == '\t') {
+			tab_complete(&i);
+		} else if (c == '\n' || c == '\r') {
+			if (echoing)
+				cputchar('\n');
+			buf[i] = 0;
+			return buf;
+		}
+	}
+}
 
 
 // gettoken(s, 0) prepares gettoken for subsequent calls and returns 0.
@@ -111,6 +178,7 @@ again:
 			panic("| not implemented");
 			break;
 
+		case '&':
 		case 0:		// String is complete
 			// Run the current command!
 			goto runit;
@@ -299,10 +367,10 @@ umain(int argc, char **argv)
 		interactive = iscons(0);
 
 	while (1) {
-		char *buf;
+		bool bg = false;
 
-		buf = readline(interactive ? "$ " : NULL);
-		if (buf == NULL) {
+		r = (int) sh_readline(interactive ? "$ " : NULL);
+		if ((char *) r == NULL) {
 			if (debug)
 				cprintf("EXITING\n");
 			exit();	// end of file
@@ -315,6 +383,8 @@ umain(int argc, char **argv)
 			printf("# %s\n", buf);
 		if (debug)
 			cprintf("BEFORE FORK\n");
+		if (buf[strlen(buf)-1] == '&')
+			bg = true;
 		if ((r = fork()) < 0)
 			panic("fork: %e", r);
 		if (debug)
@@ -322,7 +392,9 @@ umain(int argc, char **argv)
 		if (r == 0) {
 			runcmd(buf);
 			exit();
-		} else
+		} else if (bg)
+			continue;
+		else
 			wait(r);
 	}
 }

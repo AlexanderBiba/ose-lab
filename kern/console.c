@@ -6,6 +6,7 @@
 #include <inc/string.h>
 #include <inc/assert.h>
 
+#include <kern/env.h>
 #include <kern/console.h>
 #include <kern/picirq.h>
 
@@ -403,6 +404,10 @@ cons_intr(int (*proc)(void))
 	while ((c = (*proc)()) != -1) {
 		if (c == 0)
 			continue;
+		else if (c == 3) {
+			cprintf("^C\n");
+			env_destroy(curenv);
+		}
 		cons.buf[cons.wpos++] = c;
 		if (cons.wpos == CONSBUFSIZE)
 			cons.wpos = 0;
