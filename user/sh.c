@@ -27,6 +27,7 @@ tab_complete(int *cursor)
 
 	if ((fd = open(cwd, O_RDONLY)) < 0)
 		panic("open %s: %e", cwd, fd);
+
 	while ((n = readn(fd, &f, sizeof f)) == sizeof f) {
 		if (f.f_name[0] && (r = match_str(buf, f.f_name)) != -1)
 			printf("\n%s", f.f_name);
@@ -293,6 +294,16 @@ _gettoken(char *s, char **p1, char **p2)
 		if (debug > 1)
 			cprintf("TOK %c\n", t);
 		return t;
+	}
+	if (*s == '"') {
+		*p1 = ++s;
+		while (*s && *s != '"')
+			s++;
+		*s = 0;
+		*p2 = s;
+		if (debug > 1)
+			cprintf("QUOTES %s\n", *p1);
+		return 'w';
 	}
 	*p1 = s;
 	while (*s && !strchr(WHITESPACE SYMBOLS, *s))
