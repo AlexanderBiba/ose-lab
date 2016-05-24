@@ -14,27 +14,73 @@
 
 === Q How much disk space can be addressed by a single bitmap block
 ===   when size of a block is 4Kb? (number in _bytes_)
+134217728
 
 === Q How much disk space can be addressed by a single bitmap block
 ===   when size of a block is 512B? (number in _bytes_)
+2097152
 
 === Q What is a maximum supported file size in JOS FS? (number in _bytes_)
+4235264
 
 === Q Did you have to do anything else to ensure that the I/O
 ===   privilege setting is saved and restored properly when you
 ===   subsequently switch from one environment to another? Why? 
 ===   (free form)
+We didn't have to do anything to ensure this.
+The I/O privilage is set using a bit in the eflags register, which is restored as part 
+of the trap frame by the kernal after each context switch, in the env_pop_tf() function.
 
 === Q How long approximately did it take you to do this lab?
 ===   (number of hours for all partners combined)
+30
 
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
+6
 
 === Q If the challenge requires changing the kernel source, list the
 ===   files which you have changed/added during implementation.
 ===   (one file per line, relative to lab directory containing .git/)
+kern/console.c
+user/sh.c
 
 === Q Describe you solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
+We've added extra features to the shell:
+	Backgrounding commands (ls &)
+	Multiple commands per line (ls; echo hi)
+	Quoting (echo "a | b")
+	Tab completion
+	Ctl-c to kill the running environment
+
+Backgrounding commands (ls &): 
+In umain before forking the environment, the last character in the buffer 
+is checked, if it's '&' - after the fork, the parent env won't wait for the 
+child env. Also a case '&' was added in runcmd with the command goto runit.
+
+Multiple commands per line (ls; echo hi):
+In runcmd() added case ';' which executes a fork, with the child enviroment
+going to runit and the parent env waits for the child to exit and goes to
+again label.
+
+Quoting (echo "a | b"):
+In _gettoken() added case to interpret an expression inside quotes as a whole
+word, instead of breaking it down to symbols.
+
+Tab completion 
+Created following functions in user/sh.c:
+static int match_str(const char *p, const char *q);
+static void tab_complete(int *cursor);
+static char * sh_readline(const char *prompt);
+Made umain() call sh_readline() instead of lib/readline:readline(),
+sh_readline() calls tab_complete() when pressing the tab key,
+call_complete() uses match_str() to find the files with the same
+filename beginning as the current buffer contents, and then displays
+them on the console, one file per line.
+
+Ctrl-c to kill the running environment:
+Function cons_intr() in kern/console.c was changed to destroy the current
+environment when recieving the ctrl-c key.
+
