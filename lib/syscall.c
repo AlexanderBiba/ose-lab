@@ -123,3 +123,8 @@ sys_env_set_sched_prio(envid_t envid, uint32_t prio)
 	return syscall(SYS_env_set_sched_prio, 1, envid, prio, 0, 0, 0);
 }
 
+unsigned int
+sys_time_msec(void)
+{
+	return (unsigned int) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
+}
