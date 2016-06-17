@@ -85,18 +85,18 @@ int
 e1000_tx(void *data, uint16_t len)
 {
 	int tail = e1000r(E1000_TDT);
-	tx_queue[tail].status &= ~1;	//	clear DD bit TODO: buggy ?
-	int next_tail = (tail + 1) % TX_Q_LEN;
 
 	if (len > TX_BUFFER_SIZE)
 		return -E_INVAL;
 
-	if ((tx_queue[next_tail].status & 1) == 0)	//	DD bit not set
+	if ((tx_queue[tail].status & 1) == 0)	//	DD bit not set
 		return -E_E1000_TX_RING_FULL;
+
+	tx_queue[tail].status &= ~1;	//	clear DD bit TODO: buggy ?
 
 	memcpy((void*)&tx_buffers[tail], data, len);
 	tx_queue[tail].length = len;
-	e1000w(E1000_TDT, next_tail);
+	e1000w(E1000_TDT, (tail + 1) % TX_Q_LEN);
 
 	return 0;
 }
