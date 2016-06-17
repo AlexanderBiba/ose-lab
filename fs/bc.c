@@ -59,7 +59,7 @@ bc_pgfault(struct UTrapframe *utf)
 
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
-	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
+	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL & ~PTE_D)) < 0)
 		panic("in bc_pgfault, sys_page_map: %e", r);
 
 	// Check that the block we read was allocated. (exercise for
@@ -86,11 +86,9 @@ flush_block(void *addr)
 
 	// LAB 5: Your code here.
 	if (!va_is_mapped(addr))
-		//panic("flush_block va %08x is not mapped", addr);
 		return;
 
 	if (!va_is_dirty(addr))
-		//panic("flush_block va %08x is not dirty", addr);
 		return;
 
 	int r;
@@ -100,7 +98,7 @@ flush_block(void *addr)
 	if ((r = ide_write(blockno * BLKSECTS, va, BLKSECTS)) < 0)
 		panic("in flush_block, ide_write: %e", r);
 
-	if ((r = sys_page_map(0, va, 0, va, uvpt[PGNUM(va)] & PTE_SYSCALL)) < 0)
+	if ((r = sys_page_map(0, va, 0, va, uvpt[PGNUM(va)] & PTE_SYSCALL & ~PTE_D)) < 0)
 		panic("in flush_block, sys_page_map: %e", r);
 }
 
