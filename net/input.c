@@ -2,10 +2,15 @@
 
 extern union Nsipc nsipcbuf;
 
+char ipc_page[INPUT_QUEUE_SIZE][PGSIZE] __attribute__ ((aligned(PGSIZE)));
+
 void
 input(envid_t ns_envid)
 {
 	binaryname = "ns_input";
+
+	int i, r;
+	int curr = 0;
 
 	// LAB 6: Your code here:
 	// 	- read a packet from the device driver
@@ -13,4 +18,13 @@ input(envid_t ns_envid)
 	// Hint: When you IPC a page to the network server, it will be
 	// reading from it for a while, so don't immediately receive
 	// another packet in to the same physical page.
+	while (1) {
+		if ((r = sys_tcp_rx(nsipcbuf.pkt.jp_data, PGSIZE, &nsipcbuf.pkt.jp_len)) < 0)
+			panic("input: %e", r);
+
+		memcpy(ipc_page[curr], &nsipcbuf, sizeof(union Nsipc));
+		ipc_send(ns_envid, NSREQ_INPUT, ipc_page[curr], PTE_P | PTE_U);
+
+		curr = (curr + 1) % INPUT_QUEUE_SIZE;
+	}
 }

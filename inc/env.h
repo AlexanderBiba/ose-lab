@@ -70,6 +70,12 @@ struct Env {
 
 	// Lab 4 challenge
 	uint32_t env_sched_prio;
+
+	// Lab 6 E1000
+	bool env_tcp_recving;		// Env is blocked receiving network packet
+	void *env_tcp_dstva;		// VA of buffer at which to map received packet
+	uint32_t env_tcp_buff_size;	// Buffer size
+	int *env_tcp_dstlen;		// VA of buffer at which to map received packet
 };
 
 #endif // !JOS_INC_ENV_H

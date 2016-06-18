@@ -54,6 +54,12 @@ sched_yield(void)
 	if (!topenv && curenv && curenv->env_status == ENV_RUNNING)
 		env_run(curenv);
 
+	//// if we are waiting for incoming packets, keep waiting
+	//for (i = 0; i < NENV; i++) {
+	//	itrenv = &envs[i];
+	//	if ((itrenv->env_status == ENV_NOT_RUNNABLE && itrenv->env_tcp_recving))
+	//		while(1);
+	//}
 
 	// sched_halt never returns
 	sched_halt();

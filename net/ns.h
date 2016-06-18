@@ -8,11 +8,13 @@
 #define TIMER_INTERVAL 250
 
 // Virtual address at which to receive page mappings containing client requests.
-#define QUEUE_SIZE	20
-#define REQVA		(0x0ffff000 - QUEUE_SIZE * PGSIZE)
+#define QUEUE_SIZE		20
+#define REQVA			(0x0ffff000 - QUEUE_SIZE * PGSIZE)
 
-#define OUTPUT_QUEUE_SIZE QUEUE_SIZE
-#define OUTPUT_REQVA 	(REQVA - OUTPUT_QUEUE_SIZE * PGSIZE)
+#define OUTPUT_QUEUE_SIZE	QUEUE_SIZE
+#define OUTPUT_QVA 		(REQVA - OUTPUT_QUEUE_SIZE * PGSIZE)
+
+#define INPUT_QUEUE_SIZE	QUEUE_SIZE
 
 /* timer.c */
 void timer(envid_t ns_envid, uint32_t initial_to);

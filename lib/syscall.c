@@ -134,3 +134,9 @@ sys_tcp_tx(void *data, int len)
 {
 	return syscall(SYS_tcp_tx, 0, (uint32_t) data, len, 0, 0, 0);
 }
+
+int
+sys_tcp_rx(void *buffer, int size, int *len)
+{
+	return syscall(SYS_tcp_rx, 0, (uint32_t) buffer, size, (uint32_t) len, 0, 0);
+}

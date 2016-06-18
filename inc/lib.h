@@ -62,6 +62,7 @@ int	sys_ipc_recv(void *rcv_pg);
 int	sys_env_set_sched_prio(envid_t envid, uint32_t prio);
 unsigned int sys_time_msec(void);
 int 	sys_tcp_tx(void *data, int len);
+int	sys_tcp_rx(void *buffer, int size, int *len);
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))

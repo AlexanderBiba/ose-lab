@@ -20,6 +20,7 @@ enum {
 	SYS_env_set_sched_prio,
 	SYS_time_msec,
 	SYS_tcp_tx,
+	SYS_tcp_rx,
 	NSYSCALLS
 };
 

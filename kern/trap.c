@@ -15,6 +15,8 @@
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
 #include <kern/time.h>
+#include <kern/env.h>
+#include <kern/e1000.h>
 
 /* For debugging, so print_trapframe can distinguish between printing
  * a saved trapframe and printing the current trapframe and print some
@@ -225,7 +227,7 @@ trap_dispatch(struct Trapframe *tf)
 	// LAB 6: Your code here.
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
 		lapic_eoi();
-		time_tick(); //	TODO: what's the deal with the warning?
+		time_tick();
 		sched_yield();
 		return;
 	}
@@ -243,11 +245,28 @@ trap_dispatch(struct Trapframe *tf)
 		return;
 	}
 
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_E1000) {
+		int i, r;
+		lapic_eoi();
+		e1000_eoi();
+		for (i = 0; i < NENV; i++) {
+			struct Env *e = &envs[i];
+			if (e->env_tcp_recving) {
+				if ((r = e1000_rx(e->env_tcp_dstva, e->env_tcp_buff_size, e->env_tcp_dstlen)) < 0)
+					panic("trap_dispatch: %e", r);
+				e->env_tcp_recving = false;
+				e->env_status = ENV_RUNNABLE;
+				break;
+			}
+		}
+		return;
+	}
+
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
+		panic("unhandled trap in kernel: %x", tf->tf_trapno);
 	else {
 		env_destroy(curenv);
 		return;

@@ -96,7 +96,7 @@ sys_exofork(void)
 	newenv->env_status = ENV_NOT_RUNNABLE;
 
 	newenv->env_tf = curenv->env_tf;
-	newenv->env_tf.tf_regs.reg_eax = 0;	//	TODO: this is the result right?
+	newenv->env_tf.tf_regs.reg_eax = 0;
 
 	return newenv->env_id;
 }
@@ -220,7 +220,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if ((perm & ~PTE_SYSCALL) != 0 || (perm & (PTE_P | PTE_U)) != (PTE_P | PTE_U))
 		return -E_INVAL;
 
-	if (!(p = page_alloc(ALLOC_ZERO))) // TODO: maybe shouldn't zero it?
+	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
 
 	if ((r = page_insert(e->env_pgdir, p, va, perm)) < 0) {
@@ -385,7 +385,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if ((perm & PTE_W) && !(*pte & PTE_W))
 			return -E_INVAL;
 
-		if (rcvenv->env_ipc_dstva >= (void *)UTOP)	//	the recv does not want to accept a page TODO: this was not written specifically in the definition
+		if (rcvenv->env_ipc_dstva >= (void *)UTOP)	//	the recv does not want to accept a page
 			return -E_INVAL;
 
 		if ((r = page_insert(rcvenv->env_pgdir, p, rcvenv->env_ipc_dstva, perm)) < 0)
@@ -455,6 +455,32 @@ sys_tcp_tx(void *data, int len)
 	user_mem_assert(curenv, data, len, PTE_U | PTE_W);
 
 	return e1000_tx(data, len);
+}
+
+static int
+sys_tcp_rx(void *buffer, int size, int *len)
+{
+	int r;
+
+	user_mem_assert(curenv, buffer, size, PTE_U | PTE_W);
+	user_mem_assert(curenv, len, sizeof(int), PTE_U | PTE_W);
+
+	void *buffer_kva = (void*) ((uintptr_t) page2kva(page_lookup(curenv->env_pgdir, buffer, NULL)) | PGOFF(buffer));
+	void *len_kva = (void*) ((uintptr_t) page2kva(page_lookup(curenv->env_pgdir, len, NULL)) | PGOFF(len));
+
+	if ((r = e1000_rx(buffer_kva, size, len_kva)) == 0)
+		return 0;
+	else if (r != -E_E1000_RX_RING_EMPTY)
+		return r;
+
+	curenv->env_tcp_recving = true;
+	curenv->env_tcp_dstva = buffer_kva;
+	curenv->env_tcp_buff_size = size;
+	curenv->env_tcp_dstlen = len_kva;
+
+	curenv->env_status = ENV_NOT_RUNNABLE;
+
+	return 0;
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -537,12 +563,14 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		ret = sys_tcp_tx((void*)a1, a2);
 		break;
 
+	case SYS_tcp_rx :
+		ret = sys_tcp_rx((void*)a1, a2, (void*)a3);
+		break;
 
-	//case NSYSCALLS :
-	//	break;
 
 	default:
 		return -E_INVAL;
+
 	}
 
 	return ret;

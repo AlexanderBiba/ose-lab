@@ -28,6 +28,7 @@ enum {
 
 	// E1000 error codes
 	E_E1000_TX_RING_FULL	,
+	E_E1000_RX_RING_EMPTY	,
 	MAXERROR
 };
 
