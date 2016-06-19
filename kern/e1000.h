@@ -3,14 +3,6 @@
 
 #include <kern/pci.h>
 
-/* MAC address */
-#define E1000_MAC_ADDR0 0x52
-#define E1000_MAC_ADDR1 0x54
-#define E1000_MAC_ADDR2 0x00
-#define E1000_MAC_ADDR3 0x12
-#define E1000_MAC_ADDR4 0x34
-#define E1000_MAC_ADDR5 0x56
-
 /* PCI Device IDs */
 #define E1000_DEV_ID_82540EM             0x100E
 #define E1000_VENDOR_ID_82540EM          0x8086
@@ -30,9 +22,16 @@
  */
 /* General purpose regs */
 #define E1000_STATUS   0x00008  /* Device Status - RO */
+#define E1000_EERD     0x00014  /* EEPROM Read - RW */
 #define E1000_ICR      0x000C0  /* Interrupt Cause Read - R/clr */
 #define E1000_IMS      0x000D0  /* Interrupt Mask Set - RW */
 #define E1000_IMC      0x000D8  /* Interrupt Mask Clear - WO */
+
+/* EEPROM related regs */
+#define E1000_EEPROM_RW_REG_DATA   16   /* Offset to data in EEPROM read/write registers */
+#define E1000_EEPROM_RW_REG_DONE   0x10 /* Offset to READ/WRITE done bit */
+#define E1000_EEPROM_RW_REG_START  1    /* First bit for telling part to start operation */
+#define E1000_EEPROM_RW_ADDR_SHIFT 8    /* Shift to the address bits */
 
 /* Interrupt Cause Read */
 #define E1000_ICR_TXDW          0x00000001 /* Transmit desc written back */
@@ -203,6 +202,8 @@
 #define E1000_TX_BUFFER_SIZE	2048
 #define E1000_RX_BUFFER_SIZE	2048
 
+uint8_t e1000_hwaddr[6];
+
 struct e1000_tx_desc
 {
 	uint64_t buffer_addr;	/* Address of the descriptor's data buffer */
@@ -232,8 +233,9 @@ typedef struct {
 	uint8_t x[E1000_RX_BUFFER_SIZE]; 
 } __attribute__((packed)) e1000_tx_buffer_t;
 
-int e1000_init(struct pci_func *pcif);
+void e1000_get_hwaddr(uint8_t buffer[6]);
 void e1000_eoi(void);
+int e1000_init(struct pci_func *pcif);
 int e1000_tx(void *data, uint16_t len);
 int e1000_rx(void *buffer, uint16_t size, int *len);
 

@@ -1,0 +1,61 @@
+=== Q1: How did you structure your transmit implementation? In particular,
+=== what do you do if the transmit ring is full?
+Driver initially sets the DD bits for all tx descriptors.
+While transmitting a package, driver checks current E1000_TDT DD bit:
+If set, clears the DD bit in current tail desc, copies the data to kernel 
+buffer, sets the length and increments the tail.
+Otherwise, returns -E_E1000_TX_RING_FULL.
+The network env output process holds an additional ring queue of pkt buffers,
+and waits for either NSREQ_OUTPUT or NSREQ_TIMER.
+For every NSREQ_TIMER event the output tries to send the packets between head
+and tail.
+For every NSREQ_OUTPUT the packet is pushed into the queue, tail is incremented
+and output env tries to send the packets between head and tail to the driver.
+While sending packets, if driver returns E_E1000_TX_RING_FULL, the output env
+stops trying to send packets and returns to ipc_recv state and waits for events.
+If all queues are full (tail reached head in output env), panic
+
+=== Q2: How did you structure your receive implementation? In particular, what
+=== do you do if the receive queue is empty and a user environment requests the
+=== next incoming packet?
+Driver activates e1000s irq line in pic and sets the E1000_ICR_RXT0 bit in 
+E1000_IMS.
+When user env uses the tcp_recv system call, the system call code first tries
+to read packet from e1000 recieve queue (using driver of course),
+if there is a packet available, this packet is returned to the user env,
+otherwise, the request is registered in environments struct Env,
+and the environment is set as ENV_NOT_RUNNABLE.
+Registered fields include bool env_tcp_recving, void *env_tcp_dstva, uint32_t
+env_tcp_buff_size, int *env_tcp_dstlen.
+When an IRQ_E1000 interrupt arrives, trap code scans all environments looking
+for an env which has env_tcp_recving flag on, if found,
+writes the packet data to the buffer and len pointers supplied by the
+environment and sets the environment ENV_RUNNABLE, otherwise, silently does
+nothing.
+This way, when there are packets in the recieve queue, they are immediatly
+returned to the user env, otherwise, user env hangs until the interrupt arrives
+Network server holds a queue of receiving buffers, so that it doesn't overwrite
+previously unprocessed buffers.
+
+=== Q3: What does the web page served by JOS's web server say?
+This file came from JOS.
+Cheesy web page!
+
+=== Q4: How long approximately did it take you to do this lab?
+About 30 hours
+
+=== Challenge description:
+We chose to load the E1000's MAC address out of the EEPROM.
+We do this by storing an array of bytes called e1000_hwaddr[6], this array is
+initialized with the e1000 hwaddr in the following way:
+During e1000_init() we use a utility function 
+static int e1000_eeprom_r(uint8_t addr)
+to read addresses 0x0,0x1,0x2 from the EEPROM.
+What this function does is write the addr and start bit in the E1000_EERD 
+register, and then waits in a loop for the E1000_EEPROM_RW_REG_DONE bit to be
+asserted.
+The data is then read from the same register and returned to the caller.
+Also, a systemcall "static void sys_e100_get_hwaddr(uint8_t buffer[6])" was
+added to be able to get the hwaddr from user space.
+lwIP's low_level_init was also changed and now uses this system call instead
+of the hard-coded MAC address.

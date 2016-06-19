@@ -19,6 +19,7 @@ enum {
 	SYS_ipc_recv,
 	SYS_env_set_sched_prio,
 	SYS_time_msec,
+	SYS_e100_get_hwaddr,
 	SYS_tcp_tx,
 	SYS_tcp_rx,
 	NSYSCALLS

@@ -19,28 +19,62 @@ volatile e1000_tx_buffer_t tx_buffers[E1000_TX_Q_LEN];
 volatile e1000_rx_buffer_t rx_buffers[E1000_RX_Q_LEN];
 
 static void
-e1000w(int index, int value)
+e1000w(int addr, int data)
 {
 	if (!e1000)
 		return;
 
 #ifdef LOG_REGS
-	cprintf("E1000: e1000w: idx 0x%08x val 0x%08x\n", index, value);
+	cprintf("E1000: e1000w: addr 0x%08x data 0x%08x\n", addr, data);
 #endif
-	e1000[index/4] = value;
+	e1000[addr/4] = data;
 }
 
 static uint32_t
-e1000r(int index)
+e1000r(int addr)
 {
 	if (!e1000)
 		return 0;
 
-	uint32_t value = e1000[index/4];
+	uint32_t data = e1000[addr/4];
 #ifdef LOG_REGS
-	cprintf("E1000: e1000r: idx 0x%08x val 0x%08x\n", index, value);
+	cprintf("E1000: e1000r: addr 0x%08x data 0x%08x\n", addr, data);
 #endif
-	return value;
+	return data;
+}
+
+static int
+e1000_eeprom_r(uint8_t addr)
+{
+	if (!e1000)
+		return 0;
+
+	e1000w(E1000_EERD, addr << E1000_EEPROM_RW_ADDR_SHIFT | E1000_EEPROM_RW_REG_START);
+	while (!(e1000r(E1000_EERD) & E1000_EEPROM_RW_REG_DONE));
+	uint16_t data = (e1000r(E1000_EERD) >> E1000_EEPROM_RW_REG_DATA);
+#ifdef LOG_REGS
+	cprintf("E1000: e1000_eeprom_r: addr 0x%02x data 0x%04x\n", addr, data);
+#endif
+	return data;
+}
+
+void
+e1000_get_hwaddr(uint8_t buffer[6])
+{
+	if (!e1000)
+		return;
+
+	memcpy(buffer, e1000_hwaddr, 6);
+}
+
+// Acknowledge interrupt.
+void
+e1000_eoi(void)
+{
+	if (!e1000)
+		return;
+
+	e1000r(E1000_ICR); // clear the interrupt
 }
 
 int
@@ -53,10 +87,14 @@ e1000_init(struct pci_func *pcif)
 
 	// map registers in memory
 	e1000 = mmio_map_region(pcif->reg_base[0], pcif->reg_size[0]);
-	e1000r(E1000_STATUS);	//	for debug
 
 	// enable irq line
 	irq_setmask_8259A(irq_mask_8259A & ~(1 << pcif->irq_line));
+
+	// get mac address from EEPROM
+	((uint16_t*) e1000_hwaddr)[0] = e1000_eeprom_r(0);
+	((uint16_t*) e1000_hwaddr)[1] = e1000_eeprom_r(1);
+	((uint16_t*) e1000_hwaddr)[2] = e1000_eeprom_r(2);
 
 	// init tx descriptors
 	for (i = 0; i < E1000_TX_Q_LEN; i++) {
@@ -83,8 +121,8 @@ e1000_init(struct pci_func *pcif)
 	}
 
 	// init rx registers
-	e1000w(E1000_RAL0, (E1000_MAC_ADDR3 << 24) | (E1000_MAC_ADDR2 << 16) | (E1000_MAC_ADDR1 << 8) | (E1000_MAC_ADDR0 << 0));
-	e1000w(E1000_RAH0, /* set addr valid bit */  (0x1             << 31) | (E1000_MAC_ADDR5 << 8) | (E1000_MAC_ADDR4 << 0));
+	e1000w(E1000_RAL0, (e1000_hwaddr[3] << 24) | (e1000_hwaddr[2] << 16) | (e1000_hwaddr[1] << 8) | (e1000_hwaddr[0] << 0));
+	e1000w(E1000_RAH0, /* set addr valid bit */  (0x1             << 31) | (e1000_hwaddr[5] << 8) | (e1000_hwaddr[4] << 0));
 	for (i = 0; i < 0x200; i += 0x4) {
 		e1000w(E1000_MTA + i, 0x0);
 	}
@@ -98,16 +136,6 @@ e1000_init(struct pci_func *pcif)
 	e1000w(E1000_RCTL, E1000_RCTL_EN | E1000_RCTL_LBM_NO | E1000_RCTL_BAM | E1000_RCTL_SZ_1024 | E1000_RCTL_SECRC);
 
 	return 0;
-}
-
-// Acknowledge interrupt.
-void
-e1000_eoi(void)
-{
-	if (!e1000)
-		return;
-
-	e1000r(E1000_ICR); // clear the interrupt
 }
 
 int
