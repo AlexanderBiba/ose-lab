@@ -17,6 +17,7 @@
 #include <kern/time.h>
 #include <kern/env.h>
 #include <kern/e1000.h>
+#include <kern/picirq.h>
 
 /* For debugging, so print_trapframe can distinguish between printing
  * a saved trapframe and printing the current trapframe and print some
@@ -247,8 +248,8 @@ trap_dispatch(struct Trapframe *tf)
 
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_E1000) {
 		int i, r;
-		lapic_eoi();
 		e1000_eoi();
+		irq_eoi();
 		for (i = 0; i < NENV; i++) {
 			struct Env *e = &envs[i];
 			if (e->env_tcp_recving) {

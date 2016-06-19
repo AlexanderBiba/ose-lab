@@ -21,6 +21,9 @@ volatile e1000_rx_buffer_t rx_buffers[E1000_RX_Q_LEN];
 static void
 e1000w(int index, int value)
 {
+	if (!e1000)
+		return;
+
 #ifdef LOG_REGS
 	cprintf("E1000: e1000w: idx 0x%08x val 0x%08x\n", index, value);
 #endif
@@ -30,6 +33,9 @@ e1000w(int index, int value)
 static uint32_t
 e1000r(int index)
 {
+	if (!e1000)
+		return 0;
+
 	uint32_t value = e1000[index/4];
 #ifdef LOG_REGS
 	cprintf("E1000: e1000r: idx 0x%08x val 0x%08x\n", index, value);
@@ -49,6 +55,7 @@ e1000_init(struct pci_func *pcif)
 	e1000 = mmio_map_region(pcif->reg_base[0], pcif->reg_size[0]);
 	e1000r(E1000_STATUS);	//	for debug
 
+	// enable irq line
 	irq_setmask_8259A(irq_mask_8259A & ~(1 << pcif->irq_line));
 
 	// init tx descriptors
@@ -101,12 +108,14 @@ e1000_eoi(void)
 		return;
 
 	e1000r(E1000_ICR); // clear the interrupt
-	e1000w(E1000_IMS, E1000_ICR_RXT0);
 }
 
 int
 e1000_tx(void *data, uint16_t len)
 {
+	if (!e1000)
+		return -E_INVAL;
+
 	int tail = e1000r(E1000_TDT);
 
 	if (len > E1000_TX_BUFFER_SIZE)
@@ -127,6 +136,9 @@ e1000_tx(void *data, uint16_t len)
 int
 e1000_rx(void *buffer, uint16_t size, int *len)
 {
+	if (!e1000)
+		return -E_INVAL;
+
 	static int head;
 
 	if ((rx_queue[head].status & 0x1) == 0) // DD bit not set
@@ -141,6 +153,7 @@ e1000_rx(void *buffer, uint16_t size, int *len)
 	memcpy(buffer, (void*)&rx_buffers[head], E1000_RX_BUFFER_SIZE);
 	rx_queue[head].status &= ~1; // clear DD bit
 
+	head = (head + 1) % E1000_RX_Q_LEN;
 	e1000w(E1000_RDT, (tail + 1) % E1000_RX_Q_LEN);
 
 	return 0;
