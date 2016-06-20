@@ -60,7 +60,7 @@ low_level_init(struct netif *netif)
     netif->mtu = 1500;
     netif->flags = NETIF_FLAG_BROADCAST;
 
-    sys_e100_get_hwaddr(netif->hwaddr);
+    sys_e1000_get_hwaddr(netif->hwaddr);
 }
 
 /*

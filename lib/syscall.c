@@ -130,9 +130,9 @@ sys_time_msec(void)
 }
 
 void
-sys_e100_get_hwaddr(uint8_t buffer[6])
+sys_e1000_get_hwaddr(uint8_t buffer[6])
 {
-	syscall(SYS_e100_get_hwaddr, 0, (uint32_t) buffer, 0, 0, 0, 0);
+	syscall(SYS_e1000_get_hwaddr, 0, (uint32_t) buffer, 0, 0, 0, 0);
 }
 
 int

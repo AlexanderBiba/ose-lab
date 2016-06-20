@@ -7,35 +7,47 @@ buffer, sets the length and increments the tail.
 Otherwise, returns -E_E1000_TX_RING_FULL.
 The network env output process holds an additional ring queue of pkt buffers,
 and waits for either NSREQ_OUTPUT or NSREQ_TIMER.
-For every NSREQ_TIMER event the output tries to send the packets between head
-and tail.
-For every NSREQ_OUTPUT the packet is pushed into the queue, tail is incremented
+For every NSREQ_OUTPUT, if output env queue is empty, it first tries to send 
+the packet directly to the driver, if -E_E1000_TX_RING_FULL (or queue wasn't 
+empty to begin with), the packet is pushed into the queue, tail is incremented 
 and output env tries to send the packets between head and tail to the driver.
-While sending packets, if driver returns E_E1000_TX_RING_FULL, the output env
+While sending packets, if driver returns -E_E1000_TX_RING_FULL, the output env
 stops trying to send packets and returns to ipc_recv state and waits for events.
-If all queues are full (tail reached head in output env), panic
+For every NSREQ_TIMER event the output simply tries to send the packets between 
+head and tail (again stops on first -E_E1000_TX_RING_FULL returned from driver).
+If all queues are full (tail reached head in output env), panic.
 
 === Q2: How did you structure your receive implementation? In particular, what
 === do you do if the receive queue is empty and a user environment requests the
 === next incoming packet?
 Driver activates e1000s irq line in pic and sets the E1000_ICR_RXT0 bit in 
-E1000_IMS.
+E1000_IMS, also trap gate is initialized for IRQ_E1000 in kern/trap.c.
 When user env uses the tcp_recv system call, the system call code first tries
 to read packet from e1000 recieve queue (using driver of course),
-if there is a packet available, this packet is returned to the user env,
-otherwise, the request is registered in environments struct Env,
-and the environment is set as ENV_NOT_RUNNABLE.
+if there is a packet available, this packet is copied to the user env,
+otherwise, the request is registered in environments struct Env, and the 
+environment is set to ENV_NOT_RUNNABLE.
 Registered fields include bool env_tcp_recving, void *env_tcp_dstva, uint32_t
 env_tcp_buff_size, int *env_tcp_dstlen.
 When an IRQ_E1000 interrupt arrives, trap code scans all environments looking
-for an env which has env_tcp_recving flag on, if found,
-writes the packet data to the buffer and len pointers supplied by the
-environment and sets the environment ENV_RUNNABLE, otherwise, silently does
-nothing.
+for an env which has env_tcp_recving flag on, if found, writes the packet data
+to the buffer and len pointers supplied by the environment and sets the 
+environment ENV_RUNNABLE, otherwise, silently does nothing.
 This way, when there are packets in the recieve queue, they are immediatly
-returned to the user env, otherwise, user env hangs until the interrupt arrives
+returned to the user env, otherwise, user env hangs until the interrupt
+arrives.
 Network server holds a queue of receiving buffers, so that it doesn't overwrite
 previously unprocessed buffers.
+Additionally, input helper env forks another env - a keep_alive env.
+This env runs: while(1) sys_yield(); and is meant to prevent the scheduler
+from halting the system in case all environments are set as ENV_NOT_RUNNABLE.
+This can happen, for example, in the supplied test cases, where the testinput
+waits for IPC, in ENV_NOT_RUNNABLE state, and the output env waits for incoming
+packets, also in ENV_NOT_RUNNABLE state.
+If keep alive env was not created and a scheduler tick were to occur before a
+new packet arrived, it would iterate over all the environments and would not
+find a RUNNABLE env, causing the scheduler to call sched_halt(), ultimately
+killing the system.
 
 === Q3: What does the web page served by JOS's web server say?
 This file came from JOS.

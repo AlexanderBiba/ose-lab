@@ -43,7 +43,7 @@ e1000r(int addr)
 	return data;
 }
 
-static int
+static uint16_t
 e1000_eeprom_r(uint8_t addr)
 {
 	if (!e1000)

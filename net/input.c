@@ -2,7 +2,7 @@
 
 extern union Nsipc nsipcbuf;
 
-char ipc_page[INPUT_QUEUE_SIZE][PGSIZE] __attribute__ ((aligned(PGSIZE)));
+char ns_input_queue[INPUT_QUEUE_SIZE][PGSIZE] __attribute__ ((aligned(PGSIZE)));
 
 static void keep_alive()
 {
@@ -37,8 +37,8 @@ input(envid_t ns_envid)
 		if ((r = sys_tcp_rx(nsipcbuf.pkt.jp_data, PGSIZE, &nsipcbuf.pkt.jp_len)) < 0)
 			panic("input: %e", r);
 
-		memcpy(ipc_page[curr], &nsipcbuf, sizeof(union Nsipc));
-		ipc_send(ns_envid, NSREQ_INPUT, ipc_page[curr], PTE_P | PTE_U);
+		memcpy(ns_input_queue[curr], &nsipcbuf, sizeof(union Nsipc));
+		ipc_send(ns_envid, NSREQ_INPUT, ns_input_queue[curr], PTE_P | PTE_U);
 
 		curr = (curr + 1) % INPUT_QUEUE_SIZE;
 	}

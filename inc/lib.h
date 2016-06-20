@@ -61,7 +61,7 @@ int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
 int	sys_env_set_sched_prio(envid_t envid, uint32_t prio);
 unsigned int sys_time_msec(void);
-void	sys_e100_get_hwaddr(uint8_t buffer[6]);
+void	sys_e1000_get_hwaddr(uint8_t buffer[6]);
 int 	sys_tcp_tx(void *data, int len);
 int	sys_tcp_rx(void *buffer, int size, int *len);
 

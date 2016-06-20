@@ -450,7 +450,7 @@ sys_time_msec(void)
 }
 
 static void
-sys_e100_get_hwaddr(uint8_t buffer[6])
+sys_e1000_get_hwaddr(uint8_t buffer[6])
 {
 	user_mem_assert(curenv, buffer, 6, PTE_U | PTE_W);
 
@@ -568,8 +568,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		ret = sys_time_msec();
 		break;
 
-	case SYS_e100_get_hwaddr :
-		sys_e100_get_hwaddr((void*)a1);
+	case SYS_e1000_get_hwaddr :
+		sys_e1000_get_hwaddr((void*)a1);
 		break;
 
 	case SYS_tcp_tx :
