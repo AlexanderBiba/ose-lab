@@ -99,8 +99,8 @@ e1000_init(struct pci_func *pcif)
 	// init tx descriptors
 	for (i = 0; i < E1000_TX_Q_LEN; i++) {
 		tx_queue[i].buffer_addr = kva2pa((void*)&tx_buffers[i]);
-		tx_queue[i].cmd |= 0x9;	// set RS & EOP bits
-		tx_queue[i].status |= 0x1; // set DD bit
+		tx_queue[i].cmd = (E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP) >> 24;
+		tx_queue[i].status = E1000_TXD_STAT_DD;
 	}
 
 	// init tx registers
@@ -149,10 +149,10 @@ e1000_tx(void *data, uint16_t len)
 	if (len > E1000_TX_BUFFER_SIZE)
 		return -E_INVAL;
 
-	if ((tx_queue[tail].status & 0x1) == 0) // DD bit not set
+	if ((tx_queue[tail].status & E1000_TXD_STAT_DD) == 0)
 		return -E_E1000_TX_RING_FULL;
 
-	tx_queue[tail].status &= ~0x1; // clear DD bit
+	tx_queue[tail].status &= ~E1000_TXD_STAT_DD;
 
 	memcpy((void*)&tx_buffers[tail], data, len);
 	tx_queue[tail].length = len;
@@ -169,7 +169,7 @@ e1000_rx(void *buffer, uint16_t size, int *len)
 
 	static int head;
 
-	if ((rx_queue[head].status & 0x1) == 0) // DD bit not set
+	if ((rx_queue[head].status & E1000_RXD_STAT_DD) == 0)
 		return -E_E1000_RX_RING_EMPTY;
 
 	int tail = e1000r(E1000_RDT);
@@ -179,7 +179,7 @@ e1000_rx(void *buffer, uint16_t size, int *len)
 
 	*len = rx_queue[head].length;
 	memcpy(buffer, (void*)&rx_buffers[head], E1000_RX_BUFFER_SIZE);
-	rx_queue[head].status &= ~1; // clear DD bit
+	rx_queue[head].status &= ~E1000_RXD_STAT_DD;
 
 	head = (head + 1) % E1000_RX_Q_LEN;
 	e1000w(E1000_RDT, (tail + 1) % E1000_RX_Q_LEN);

@@ -131,6 +131,28 @@
 #define E1000_TDH      0x03810  /* TX Descriptor Head - RW */
 #define E1000_TDT      0x03818  /* TX Descripotr Tail - RW */
 
+/* Transmit Descriptor bit definitions */
+#define E1000_TXD_DTYP_D     0x00100000 /* Data Descriptor */
+#define E1000_TXD_DTYP_C     0x00000000 /* Context Descriptor */
+#define E1000_TXD_POPTS_IXSM 0x01       /* Insert IP checksum */
+#define E1000_TXD_POPTS_TXSM 0x02       /* Insert TCP/UDP checksum */
+#define E1000_TXD_CMD_EOP    0x01000000 /* End of Packet */
+#define E1000_TXD_CMD_IFCS   0x02000000 /* Insert FCS (Ethernet CRC) */
+#define E1000_TXD_CMD_IC     0x04000000 /* Insert Checksum */
+#define E1000_TXD_CMD_RS     0x08000000 /* Report Status */
+#define E1000_TXD_CMD_RPS    0x10000000 /* Report Packet Sent */
+#define E1000_TXD_CMD_DEXT   0x20000000 /* Descriptor extension (0 = legacy) */
+#define E1000_TXD_CMD_VLE    0x40000000 /* Add VLAN tag */
+#define E1000_TXD_CMD_IDE    0x80000000 /* Enable Tidv register */
+#define E1000_TXD_STAT_DD    0x00000001 /* Descriptor Done */
+#define E1000_TXD_STAT_EC    0x00000002 /* Excess Collisions */
+#define E1000_TXD_STAT_LC    0x00000004 /* Late Collisions */
+#define E1000_TXD_STAT_TU    0x00000008 /* Transmit underrun */
+#define E1000_TXD_CMD_TCP    0x01000000 /* TCP packet */
+#define E1000_TXD_CMD_IP     0x02000000 /* IP packet */
+#define E1000_TXD_CMD_TSE    0x04000000 /* TCP Seg enable */
+#define E1000_TXD_STAT_TC    0x00000004 /* Tx Underrun */
+
 /* Transmit Control */
 #define E1000_TCTL_RST    0x00000001    /* software reset */
 #define E1000_TCTL_EN     0x00000002    /* enable tx */
@@ -154,6 +176,31 @@
 #define E1000_MTA      0x05200  /* Multicast Table Array - RW Array */
 #define E1000_RAL0     0x05400  /* Receive Address Low - RW */
 #define E1000_RAH0     0x05408  /* Receive Address High - RW */
+
+/* Receive Descriptor bit definitions */
+#define E1000_RXD_STAT_DD       0x01    /* Descriptor Done */
+#define E1000_RXD_STAT_EOP      0x02    /* End of Packet */
+#define E1000_RXD_STAT_IXSM     0x04    /* Ignore checksum */
+#define E1000_RXD_STAT_VP       0x08    /* IEEE VLAN Packet */
+#define E1000_RXD_STAT_UDPCS    0x10    /* UDP xsum caculated */
+#define E1000_RXD_STAT_TCPCS    0x20    /* TCP xsum calculated */
+#define E1000_RXD_STAT_IPCS     0x40    /* IP xsum calculated */
+#define E1000_RXD_STAT_PIF      0x80    /* passed in-exact filter */
+#define E1000_RXD_STAT_IPIDV    0x200   /* IP identification valid */
+#define E1000_RXD_STAT_UDPV     0x400   /* Valid UDP checksum */
+#define E1000_RXD_STAT_ACK      0x8000  /* ACK Packet indication */
+#define E1000_RXD_ERR_CE        0x01    /* CRC Error */
+#define E1000_RXD_ERR_SE        0x02    /* Symbol Error */
+#define E1000_RXD_ERR_SEQ       0x04    /* Sequence Error */
+#define E1000_RXD_ERR_CXE       0x10    /* Carrier Extension Error */
+#define E1000_RXD_ERR_TCPE      0x20    /* TCP/UDP Checksum Error */
+#define E1000_RXD_ERR_IPE       0x40    /* IP Checksum Error */
+#define E1000_RXD_ERR_RXE       0x80    /* Rx Data Error */
+#define E1000_RXD_SPC_VLAN_MASK 0x0FFF  /* VLAN ID is in lower 12 bits */
+#define E1000_RXD_SPC_PRI_MASK  0xE000  /* Priority is in upper 3 bits */
+#define E1000_RXD_SPC_PRI_SHIFT 13
+#define E1000_RXD_SPC_CFI_MASK  0x1000  /* CFI is bit 12 */
+#define E1000_RXD_SPC_CFI_SHIFT 12
 
 /* Receive Control */
 #define E1000_RCTL_RST            0x00000001    /* Software reset */
