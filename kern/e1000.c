@@ -108,7 +108,7 @@ e1000_init(struct pci_func *pcif)
 	e1000w(E1000_TDLEN, E1000_TX_Q_LEN * sizeof(struct e1000_tx_desc));
 	e1000w(E1000_TDH, 0);
 	e1000w(E1000_TDT, 0);
-	e1000w(E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | (E1000_TCTL_CT & 0x10) | (E1000_TCTL_COLD & 0x40));
+	e1000w(E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | (E1000_TCTL_COLD & (0x40 << 12)) | (E1000_TCTL_CT & (0x10 << 4)));
 	uint32_t ipgt = 10;
 	uint32_t ipgr2 = 6;
 	uint32_t ipgr1 = (2*ipgr2)/3;
