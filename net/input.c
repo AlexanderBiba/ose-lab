@@ -4,6 +4,11 @@ extern union Nsipc nsipcbuf;
 
 char ipc_page[INPUT_QUEUE_SIZE][PGSIZE] __attribute__ ((aligned(PGSIZE)));
 
+static void keep_alive()
+{
+	while (1) sys_yield();
+}
+
 void
 input(envid_t ns_envid)
 {
@@ -11,6 +16,16 @@ input(envid_t ns_envid)
 
 	int i, r;
 	int curr = 0;
+
+	envid_t ka_envid;
+
+	ka_envid = fork();
+	if (ka_envid < 0)
+		panic("error forking");
+	else if (ka_envid == 0) {
+		keep_alive();
+		return;
+	}
 
 	// LAB 6: Your code here:
 	// 	- read a packet from the device driver
