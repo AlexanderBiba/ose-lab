@@ -99,7 +99,6 @@ e1000_init(struct pci_func *pcif)
 	// init tx descriptors
 	for (i = 0; i < E1000_TX_Q_LEN; i++) {
 		tx_queue[i].buffer_addr = kva2pa((void*)&tx_buffers[i]);
-		tx_queue[i].cmd = (E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP) >> 24;
 		tx_queue[i].status = E1000_TXD_STAT_DD;
 	}
 
@@ -153,6 +152,7 @@ e1000_tx(void *data, uint16_t len)
 		return -E_E1000_TX_RING_FULL;
 
 	tx_queue[tail].status &= ~E1000_TXD_STAT_DD;
+	tx_queue[tail].cmd = (E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP) >> 24;
 
 	memcpy((void*)&tx_buffers[tail], data, len);
 	tx_queue[tail].length = len;
