@@ -175,6 +175,7 @@ process_timer(envid_t envid) {
 
 	to = TIMER_INTERVAL - (now - start);
 	ipc_send(envid, to, 0, 0);
+	ipc_send(output_envid, NSREQ_TIMER, 0, 0);
 }
 
 struct st_args {
