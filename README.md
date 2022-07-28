@@ -1,1 +1,1 @@
-# OSE_lab
+# Operating Systems Engineering Lab
